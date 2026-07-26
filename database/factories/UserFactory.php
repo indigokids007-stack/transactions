@@ -2,9 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
@@ -13,11 +14,6 @@ use Illuminate\Support\Str;
 class UserFactory extends Factory
 {
     /**
-     * The current password being used by the factory.
-     */
-    protected static ?string $password;
-
-    /**
      * Define the model's default state.
      *
      * @return array<string, mixed>
@@ -25,10 +21,15 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
+            'telegram_id' => fake()->unique()->numberBetween(100000000, 999999999),
             'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'username' => fake()->unique()->userName(),
+            'role' => UserRole::Staff,
+            'status' => UserStatus::Active,
+            'locale' => 'ru',
+            'email' => null,
+            'email_verified_at' => null,
+            'password' => null,
             'remember_token' => Str::random(10),
         ];
     }

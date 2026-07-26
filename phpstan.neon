@@ -7,3 +7,4 @@ parameters:
         - app
         - database
         - routes
+    parseModelCastsMethod: true
