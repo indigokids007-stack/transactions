@@ -14,9 +14,13 @@ it('nests categories', function () {
 
 it('accepts only compatible transaction types', function () {
     $expenseOnly = Category::factory()->create(['applies_to' => CategoryAppliesTo::Expense]);
+    $incomeOnly = Category::factory()->create(['applies_to' => CategoryAppliesTo::Income]);
     $both = Category::factory()->create(['applies_to' => CategoryAppliesTo::Both]);
 
     expect($expenseOnly->acceptsType(TransactionType::Expense))->toBeTrue()
         ->and($expenseOnly->acceptsType(TransactionType::Income))->toBeFalse()
-        ->and($both->acceptsType(TransactionType::Income))->toBeTrue();
+        ->and($incomeOnly->acceptsType(TransactionType::Income))->toBeTrue()
+        ->and($incomeOnly->acceptsType(TransactionType::Expense))->toBeFalse()
+        ->and($both->acceptsType(TransactionType::Income))->toBeTrue()
+        ->and($both->acceptsType(TransactionType::Expense))->toBeTrue();
 });

@@ -20,5 +20,18 @@ Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
 
     Route::get('bootstrap', BootstrapController::class)->name('bootstrap');
 
+    Route::get('transactions', [TransactionsController::class, 'index'])->name('transactions.index');
     Route::post('transactions', [TransactionsController::class, 'store'])->name('transactions.store');
+
+    Route::patch('transactions/{transaction}', [TransactionsController::class, 'update'])
+        ->whereNumber('transaction')
+        ->name('transactions.update');
+
+    Route::delete('transactions/{transaction}', [TransactionsController::class, 'destroy'])
+        ->whereNumber('transaction')
+        ->name('transactions.destroy');
+
+    Route::get('transactions/{transaction}/revisions', [TransactionsController::class, 'revisions'])
+        ->whereNumber('transaction')
+        ->name('transactions.revisions');
 });

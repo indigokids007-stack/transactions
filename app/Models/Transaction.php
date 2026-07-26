@@ -68,4 +68,22 @@ class Transaction extends Model
         return $this->belongsToMany(DimensionValue::class, 'transaction_dimension_values')
             ->withPivot('dimension_id');
     }
+
+    /**
+     * The pivot carries the dimension the value was chosen for, which is what enforces
+     * one value per dimension. Creating and editing go through here so the two cannot
+     * write the pivot differently.
+     *
+     * @param  array<int, int>  $values  dimension id => dimension value id
+     */
+    public function syncDimensionValues(array $values): void
+    {
+        $payload = [];
+
+        foreach ($values as $dimensionId => $valueId) {
+            $payload[$valueId] = ['dimension_id' => $dimensionId];
+        }
+
+        $this->dimensionValues()->sync($payload);
+    }
 }

@@ -32,7 +32,7 @@ class CreateTransaction
                 'idempotency_key' => $input->idempotencyKey,
             ]);
 
-            $transaction->dimensionValues()->sync($this->pivotPayload($input));
+            $transaction->syncDimensionValues($input->dimensionValues);
 
             $this->recordRevision->handle($transaction, RevisionAction::Created, $actor);
 
@@ -72,17 +72,5 @@ class CreateTransaction
         }
 
         return $amountMinor;
-    }
-
-    /** @return array<int, array<string, int>> */
-    private function pivotPayload(TransactionInput $input): array
-    {
-        $payload = [];
-
-        foreach ($input->dimensionValues as $dimensionId => $valueId) {
-            $payload[$valueId] = ['dimension_id' => $dimensionId];
-        }
-
-        return $payload;
     }
 }
