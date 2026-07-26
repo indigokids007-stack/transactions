@@ -45,11 +45,20 @@ it('derives sticky defaults from the last transaction of the caller', function (
         ->assertJsonPath("defaults.dimension_values.{$value->dimension_id}", $value->id);
 });
 
-it('falls back to the configured currency when the caller has no history', function () {
+it('falls back to the configured currency and an expense type when the caller has no history', function () {
     Sanctum::actingAs(User::factory()->create());
 
     $this->getJson('/api/bootstrap')
         ->assertOk()
         ->assertJsonPath('defaults.currency', 'UZS')
-        ->assertJsonPath('defaults.category_id', null);
+        ->assertJsonPath('defaults.category_id', null)
+        ->assertJsonPath('defaults.type', 'expense');
+});
+
+it('serialises empty dimension_values as an object rather than an array', function () {
+    Sanctum::actingAs(User::factory()->create());
+
+    $response = $this->getJson('/api/bootstrap')->assertOk();
+
+    expect($response->getContent())->toContain('"dimension_values":{}');
 });

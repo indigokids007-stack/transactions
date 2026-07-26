@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\TransactionType;
 use App\Models\Transaction;
 use App\Models\User;
 
@@ -17,20 +18,22 @@ class StickyDefaults
 
         if (! $transaction instanceof Transaction) {
             return [
-                'type' => null,
+                'type' => TransactionType::Expense->value,
                 'currency' => config('money.default'),
                 'category_id' => null,
-                'dimension_values' => [],
+                'dimension_values' => (object) [],
             ];
         }
+
+        $dimensionValues = $transaction->dimensionValues
+            ->mapWithKeys(fn ($value) => [$value->pivot->getAttribute('dimension_id') => $value->id])
+            ->all();
 
         return [
             'type' => $transaction->type->value,
             'currency' => $transaction->currency,
             'category_id' => $transaction->category_id,
-            'dimension_values' => $transaction->dimensionValues
-                ->mapWithKeys(fn ($value) => [$value->pivot->getAttribute('dimension_id') => $value->id])
-                ->all(),
+            'dimension_values' => $dimensionValues === [] ? (object) [] : $dimensionValues,
         ];
     }
 }
