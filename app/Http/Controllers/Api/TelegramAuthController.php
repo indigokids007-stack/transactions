@@ -16,6 +16,8 @@ class TelegramAuthController extends Controller
 
     private const TOKEN_LIFETIME_IN_DAYS = 30;
 
+    private const MAX_CONCURRENT_TOKENS = 5;
+
     public function __construct(
         private readonly InitDataValidator $validator,
         private readonly ResolveTelegramUser $resolveTelegramUser,
@@ -47,10 +49,31 @@ class TelegramAuthController extends Controller
 
     private function issueToken(User $user): string
     {
-        $user->tokens()->where('name', self::TOKEN_NAME)->delete();
+        $this->makeRoomForOneMoreToken($user);
 
         return $user
             ->createToken(self::TOKEN_NAME, ['*'], now()->addDays(self::TOKEN_LIFETIME_IN_DAYS))
             ->plainTextToken;
+    }
+
+    private function makeRoomForOneMoreToken(User $user): void
+    {
+        $user->tokens()
+            ->where('name', self::TOKEN_NAME)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<=', now())
+            ->delete();
+
+        $surplus = $user->tokens()
+            ->where('name', self::TOKEN_NAME)
+            ->orderByDesc('id')
+            ->skip(self::MAX_CONCURRENT_TOKENS - 1)
+            ->pluck('id');
+
+        if ($surplus->isEmpty()) {
+            return;
+        }
+
+        $user->tokens()->whereIn('id', $surplus->all())->delete();
     }
 }

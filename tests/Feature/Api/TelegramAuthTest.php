@@ -86,16 +86,60 @@ it('rate limits repeated attempts', function () {
     $this->postJson('/api/auth/telegram', ['init_data' => 'nonsense'])->assertStatus(429);
 });
 
-it('revokes the previous mini app token so a second login leaves exactly one', function () {
+it('keeps a second device signed in', function () {
     User::factory()->create(['telegram_id' => 111, 'status' => UserStatus::Active]);
 
-    $first = $this->postJson('/api/auth/telegram', ['init_data' => buildInitData()])->json('token');
-    $second = $this->postJson('/api/auth/telegram', ['init_data' => buildInitData()])->json('token');
+    $phone = $this->postJson('/api/auth/telegram', ['init_data' => buildInitData()])->json('token');
+    $desktop = $this->postJson('/api/auth/telegram', ['init_data' => buildInitData()])->json('token');
 
-    expect($second)->not->toBe($first)
-        ->and(PersonalAccessToken::count())->toBe(1)
-        ->and(PersonalAccessToken::findToken($first))->toBeNull()
-        ->and(PersonalAccessToken::findToken($second))->not->toBeNull();
+    expect($desktop)->not->toBe($phone)
+        ->and(PersonalAccessToken::count())->toBe(2)
+        ->and(PersonalAccessToken::findToken($phone))->not->toBeNull()
+        ->and(PersonalAccessToken::findToken($desktop))->not->toBeNull();
+});
+
+it('caps concurrent devices at five and drops the oldest', function () {
+    User::factory()->create(['telegram_id' => 111, 'status' => UserStatus::Active]);
+
+    $tokens = collect(range(1, 6))->map(
+        fn () => $this->postJson('/api/auth/telegram', ['init_data' => buildInitData()])->json('token')
+    );
+
+    expect(PersonalAccessToken::count())->toBe(5)
+        ->and(PersonalAccessToken::findToken($tokens->first()))->toBeNull()
+        ->and(PersonalAccessToken::findToken($tokens->last()))->not->toBeNull();
+
+    $tokens->slice(1)->each(fn ($token) => expect(PersonalAccessToken::findToken($token))->not->toBeNull());
+});
+
+it('does not let an expired token occupy a slot', function () {
+    $user = User::factory()->create(['telegram_id' => 111, 'status' => UserStatus::Active]);
+
+    $expired = $user->createToken('mini-app', ['*'], now()->subDay())->plainTextToken;
+    $live = collect(range(1, 4))->map(
+        fn () => $user->createToken('mini-app', ['*'], now()->addDays(30))->plainTextToken
+    );
+
+    $fresh = $this->postJson('/api/auth/telegram', ['init_data' => buildInitData()])->json('token');
+
+    expect(PersonalAccessToken::count())->toBe(5)
+        ->and(PersonalAccessToken::findToken($expired))->toBeNull()
+        ->and(PersonalAccessToken::findToken($fresh))->not->toBeNull();
+
+    $live->each(fn ($token) => expect(PersonalAccessToken::findToken($token))->not->toBeNull());
+});
+
+it('leaves tokens issued for other purposes alone', function () {
+    $user = User::factory()->create(['telegram_id' => 111, 'status' => UserStatus::Active]);
+
+    $bot = $user->createToken('bot', ['*'], now()->addDays(30))->plainTextToken;
+
+    collect(range(1, 6))->each(
+        fn () => $this->postJson('/api/auth/telegram', ['init_data' => buildInitData()])->assertOk()
+    );
+
+    expect(PersonalAccessToken::findToken($bot))->not->toBeNull()
+        ->and(PersonalAccessToken::where('name', 'mini-app')->count())->toBe(5);
 });
 
 it('exposes no sanctum route that skips the status check', function () {
