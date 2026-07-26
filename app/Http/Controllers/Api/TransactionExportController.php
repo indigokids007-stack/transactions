@@ -19,7 +19,7 @@ class TransactionExportController extends Controller
     private const CHUNK_SIZE = 500;
 
     /** A cell starting with one of these is read as a formula by Excel and Google Sheets. */
-    private const FORMULA_PREFIXES = ['=', '+', '-', '@'];
+    private const FORMULA_PREFIXES = ['=', '+', '-', '@', "\t", "\r"];
 
     public function __invoke(TransactionFilterRequest $request): StreamedResponse
     {
@@ -109,7 +109,7 @@ class TransactionExportController extends Controller
             $this->neutralize($transaction->category->name),
             $this->neutralize($transaction->user->name),
             $transaction->department ? $this->neutralize($transaction->department->name) : '',
-            $transaction->note ? $this->neutralize($transaction->note) : '',
+            $transaction->note !== null ? $this->neutralize($transaction->note) : '',
         ];
 
         foreach ($dimensions as $dimension) {

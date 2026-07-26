@@ -92,6 +92,29 @@ it('neutralises a formula in a note or a category name', function () {
         ->and($rows[1][7])->toBe("'+cmd|/c calc");
 });
 
+it('neutralises a note that starts with a tab or a carriage return', function () {
+    Sanctum::actingAs(User::factory()->create(['role' => UserRole::Owner]));
+
+    Transaction::factory()->create(['note' => "\tcmd /c calc", 'occurred_on' => today()]);
+    Transaction::factory()->create(['note' => "\rcmd /c calc", 'occurred_on' => today()]);
+
+    $notes = collect(parseCsv($this->get('/api/exports/transactions')->assertOk()->streamedContent()))
+        ->skip(1)
+        ->pluck(7);
+
+    expect($notes->all())->toEqualCanonicalizing(["'\tcmd /c calc", "'\rcmd /c calc"]);
+});
+
+it('keeps a note of exactly "0" instead of treating it as blank', function () {
+    Sanctum::actingAs(User::factory()->create(['role' => UserRole::Owner]));
+
+    Transaction::factory()->create(['note' => '0', 'occurred_on' => today()]);
+
+    $rows = parseCsv($this->get('/api/exports/transactions')->assertOk()->streamedContent());
+
+    expect($rows[1][7])->toBe('0');
+});
+
 it('leaves a cell that does not start with a formula prefix untouched', function () {
     Sanctum::actingAs(User::factory()->create(['role' => UserRole::Owner]));
 
