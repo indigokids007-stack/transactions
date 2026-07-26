@@ -38,7 +38,7 @@ return [
     'telegram' => [
         'bot_token' => env('TELEGRAM_BOT_TOKEN'),
         'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
-        'init_data_ttl' => (int) env('TELEGRAM_INIT_DATA_TTL', 3600),
+        'init_data_ttl' => (int) env('TELEGRAM_INIT_DATA_TTL', 300),
         'api_url' => env('TELEGRAM_API_URL', 'https://api.telegram.org'),
     ],
 

@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -27,7 +26,7 @@ class UserResource extends JsonResource
             ] : null,
             'permissions' => [
                 'can_see_all' => $this->canSeeEverything(),
-                'can_manage' => $this->canSeeEverything() || $this->role === UserRole::Manager,
+                'can_manage' => $this->canSeeEverything() || $this->managedDepartments->isNotEmpty(),
             ],
         ];
     }

@@ -13,7 +13,7 @@ class ResolveTelegramUser
     /** @var list<string> */
     private const SUPPORTED_LOCALES = ['uz', 'ru', 'en'];
 
-    private const FALLBACK_LOCALE = 'ru';
+    private const FALLBACK_LOCALE = 'uz';
 
     /**
      * @param  array<string, mixed>  $telegramUser
@@ -33,7 +33,6 @@ class ResolveTelegramUser
             $user->update([
                 'name' => $this->name($telegramUser, $telegramId),
                 'username' => $this->string($telegramUser, 'username'),
-                'locale' => $this->locale($languageCode),
             ]);
 
             return $user;
@@ -49,7 +48,7 @@ class ResolveTelegramUser
             'username' => $this->string($telegramUser, 'username'),
             'role' => UserRole::Staff,
             'status' => UserStatus::Pending,
-            'locale' => $this->locale($languageCode),
+            'locale' => $this->initialLocale($languageCode),
         ]);
     }
 
@@ -76,7 +75,11 @@ class ResolveTelegramUser
         return is_string($value) && $value !== '' ? $value : null;
     }
 
-    private function locale(string $languageCode): string
+    /**
+     * Telegram only seeds the locale. Once stored it belongs to the user and no
+     * later login may change it.
+     */
+    private function initialLocale(string $languageCode): string
     {
         if (in_array($languageCode, self::SUPPORTED_LOCALES, true)) {
             return $languageCode;

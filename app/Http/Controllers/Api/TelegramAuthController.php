@@ -7,10 +7,15 @@ use App\Exceptions\InvalidInitDataException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\TelegramAuthRequest;
 use App\Http\Resources\UserResource;
+use App\Models\User;
 use App\Services\Telegram\InitDataValidator;
 
 class TelegramAuthController extends Controller
 {
+    private const TOKEN_NAME = 'mini-app';
+
+    private const TOKEN_LIFETIME_IN_DAYS = 30;
+
     public function __construct(
         private readonly InitDataValidator $validator,
         private readonly ResolveTelegramUser $resolveTelegramUser,
@@ -35,10 +40,17 @@ class TelegramAuthController extends Controller
         );
 
         return [
-            'token' => $user->isActive()
-                ? $user->createToken('mini-app', ['*'], now()->addDays(30))->plainTextToken
-                : null,
-            'user' => UserResource::make($user),
+            'token' => $user->isActive() ? $this->issueToken($user) : null,
+            'user' => UserResource::make($user->loadMissing(['department', 'managedDepartments'])),
         ];
+    }
+
+    private function issueToken(User $user): string
+    {
+        $user->tokens()->where('name', self::TOKEN_NAME)->delete();
+
+        return $user
+            ->createToken(self::TOKEN_NAME, ['*'], now()->addDays(self::TOKEN_LIFETIME_IN_DAYS))
+            ->plainTextToken;
     }
 }
