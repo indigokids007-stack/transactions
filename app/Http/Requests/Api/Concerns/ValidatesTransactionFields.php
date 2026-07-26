@@ -9,6 +9,7 @@ use App\Models\DimensionValue;
 use App\Support\Money;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Validation\Rule;
 
 /**
  * The domain rules a transaction has to satisfy whichever way it is written. Creating
@@ -18,6 +19,29 @@ use Illuminate\Database\Eloquent\Collection;
  */
 trait ValidatesTransactionFields
 {
+    /**
+     * The declarative half of those rules. Creating demands every field, editing takes
+     * whichever ones it is given, and that presence marker is the only difference
+     * between the two, so a change to the note length or the future date window cannot
+     * reach one path without the other.
+     *
+     * @param  'required'|'sometimes'  $presence
+     * @return array<string, array<int, mixed>>
+     */
+    protected function transactionFieldRules(string $presence): array
+    {
+        return [
+            'type' => [$presence, Rule::enum(TransactionType::class)],
+            'amount' => [$presence, 'regex:'.Money::AMOUNT_PATTERN, 'not_in:0,0.0,0.00'],
+            'currency' => [$presence, 'string', 'size:3', Rule::in(array_keys(config('money.currencies')))],
+            'occurred_on' => [$presence, 'date', 'before_or_equal:'.now()->addDay()->toDateString()],
+            'category_id' => [$presence, 'integer', Rule::exists('categories', 'id')->where('is_active', true)],
+            'note' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'dimension_values' => ['sometimes', 'array'],
+            'dimension_values.*' => ['integer'],
+        ];
+    }
+
     /** @return array<int, int> */
     public function dimensionValues(): array
     {

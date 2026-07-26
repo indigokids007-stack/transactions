@@ -10,7 +10,6 @@ use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateTransactionRequest extends FormRequest
 {
@@ -30,16 +29,7 @@ class UpdateTransactionRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'type' => ['sometimes', Rule::enum(TransactionType::class)],
-            'amount' => ['sometimes', 'regex:'.Money::AMOUNT_PATTERN, 'not_in:0,0.0,0.00'],
-            'currency' => ['sometimes', 'string', 'size:3', Rule::in(array_keys(config('money.currencies')))],
-            'occurred_on' => ['sometimes', 'date', 'before_or_equal:'.now()->addDay()->toDateString()],
-            'category_id' => ['sometimes', 'integer', Rule::exists('categories', 'id')->where('is_active', true)],
-            'note' => ['sometimes', 'nullable', 'string', 'max:1000'],
-            'dimension_values' => ['sometimes', 'array'],
-            'dimension_values.*' => ['integer'],
-        ];
+        return $this->transactionFieldRules('sometimes');
     }
 
     public function withValidator(Validator $validator): void

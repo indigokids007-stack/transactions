@@ -170,6 +170,30 @@ it('soft deletes and logs the deletion', function () {
         ->and(Transaction::withTrashed()->sole()->revisions()->where('action', RevisionAction::Deleted)->count())->toBe(1);
 });
 
+it('forbids an owner from deleting even their own transaction', function () {
+    $owner = User::factory()->create(['role' => UserRole::Owner]);
+    Sanctum::actingAs($owner);
+    Transaction::factory()->for($owner)->create();
+
+    $this->deleteJson('/api/transactions/'.Transaction::sole()->id)->assertStatus(403);
+
+    expect(Transaction::count())->toBe(1);
+});
+
+it('forbids a manager from deleting a colleague record', function () {
+    $department = Department::factory()->create();
+    $manager = User::factory()->create(['role' => UserRole::Manager, 'department_id' => $department->id]);
+    $manager->managedDepartments()->attach($department);
+    $staff = User::factory()->create(['department_id' => $department->id]);
+    $colleagues = Transaction::factory()->for($staff)->create(['department_id' => $department->id]);
+
+    Sanctum::actingAs($manager);
+
+    $this->deleteJson("/api/transactions/{$colleagues->id}")->assertStatus(403);
+
+    expect(Transaction::count())->toBe(1);
+});
+
 it('snapshots the transaction as it stood before the delete', function () {
     $user = User::factory()->create();
     Sanctum::actingAs($user);

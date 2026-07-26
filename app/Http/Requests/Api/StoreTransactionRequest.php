@@ -7,11 +7,9 @@ use App\Enums\TransactionType;
 use App\Http\Requests\Api\Concerns\ResolvesActor;
 use App\Http\Requests\Api\Concerns\ValidatesTransactionFields;
 use App\Models\User;
-use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreTransactionRequest extends FormRequest
 {
@@ -21,14 +19,7 @@ class StoreTransactionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', Rule::enum(TransactionType::class)],
-            'amount' => ['required', 'regex:'.Money::AMOUNT_PATTERN, 'not_in:0,0.0,0.00'],
-            'currency' => ['required', 'string', 'size:3', Rule::in(array_keys(config('money.currencies')))],
-            'occurred_on' => ['required', 'date', 'before_or_equal:'.now()->addDay()->toDateString()],
-            'category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where('is_active', true)],
-            'note' => ['nullable', 'string', 'max:1000'],
-            'dimension_values' => ['array'],
-            'dimension_values.*' => ['integer'],
+            ...$this->transactionFieldRules('required'),
             'idempotency_key' => ['nullable', 'uuid'],
         ];
     }
