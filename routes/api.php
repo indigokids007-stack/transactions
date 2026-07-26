@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\BootstrapController;
 use App\Http\Controllers\Api\ReportsController;
 use App\Http\Controllers\Api\TelegramAuthController;
+use App\Http\Controllers\Api\TransactionExportController;
 use App\Http\Controllers\Api\TransactionsController;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
@@ -38,4 +39,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
 
     Route::get('reports/summary', [ReportsController::class, 'summary'])->name('reports.summary');
     Route::get('reports/trend', [ReportsController::class, 'trend'])->name('reports.trend');
+
+    Route::get('exports/transactions', TransactionExportController::class)->name('exports.transactions');
 });
