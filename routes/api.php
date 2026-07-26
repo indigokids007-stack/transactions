@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\BootstrapController;
 use App\Http\Controllers\Api\TelegramAuthController;
+use App\Http\Controllers\Api\TransactionsController;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -18,4 +19,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
     ))->name('me');
 
     Route::get('bootstrap', BootstrapController::class)->name('bootstrap');
+
+    Route::post('transactions', [TransactionsController::class, 'store'])->name('transactions.store');
 });
