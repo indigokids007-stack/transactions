@@ -115,10 +115,12 @@ it('caps concurrent devices at five and drops the oldest', function () {
 it('does not let an expired token occupy a slot', function () {
     $user = User::factory()->create(['telegram_id' => 111, 'status' => UserStatus::Active]);
 
-    $expired = $user->createToken('mini-app', ['*'], now()->subDay())->plainTextToken;
+    // The expired token is created last on purpose. It is then the newest by id, so
+    // eviction by age alone would keep the dead row and drop a live token instead.
     $live = collect(range(1, 4))->map(
         fn () => $user->createToken('mini-app', ['*'], now()->addDays(30))->plainTextToken
     );
+    $expired = $user->createToken('mini-app', ['*'], now()->subDay())->plainTextToken;
 
     $fresh = $this->postJson('/api/auth/telegram', ['init_data' => buildInitData()])->json('token');
 
