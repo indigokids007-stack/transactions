@@ -47,7 +47,24 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Build a signed Telegram `initData` query string, the way the Telegram client does.
+ *
+ * @param  array<string, string>  $overrides
+ */
+function buildInitData(array $overrides = [], string $botToken = 'test-bot-token'): string
 {
-    // ..
+    $fields = array_merge([
+        'auth_date' => (string) now()->timestamp,
+        'query_id' => 'AAA',
+        'user' => json_encode(['id' => 111, 'first_name' => 'Alisher', 'language_code' => 'uz']),
+    ], $overrides);
+
+    ksort($fields);
+
+    $checkString = collect($fields)->map(fn ($value, $key) => "{$key}={$value}")->implode("\n");
+    $secret = hash_hmac('sha256', $botToken, 'WebAppData', true);
+    $fields['hash'] = hash_hmac('sha256', $checkString, $secret);
+
+    return http_build_query($fields);
 }
