@@ -6,7 +6,9 @@ use Database\Factories\DimensionValueFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
+/** @property-read Pivot $pivot */
 class DimensionValue extends Model
 {
     /** @use HasFactory<DimensionValueFactory> */
