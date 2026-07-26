@@ -21,7 +21,7 @@ class ReportRequest extends TransactionFilterRequest
     public function rules(): array
     {
         return array_merge(parent::rules(), [
-            'group_by' => ['nullable', 'string'],
+            'group_by' => ['nullable', 'string', 'max:64'],
             'interval' => ['nullable', Rule::enum(TrendInterval::class)],
         ]);
     }

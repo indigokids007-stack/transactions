@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
  */
 readonly class SummaryGrouping
 {
-    public const DEFAULT = 'category';
+    public const DEFAULT = SummaryGroupBy::Category->value;
 
     private const DIMENSION_PREFIX = 'dimension:';
 
