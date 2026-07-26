@@ -28,7 +28,7 @@ fresh:
 	$(PHP) artisan migrate:fresh --seed
 
 test-db:
-	$(DC) exec -T db sh -c "until pg_isready -U transactions >/dev/null 2>&1; do sleep 1; done; psql -U transactions -lqt | cut -d '|' -f 1 | grep -qw transactions_test || createdb -U transactions -O transactions transactions_test"
+	$(DC) exec -T db sh -c 'i=0; until pg_isready -U transactions >/dev/null 2>&1; do i=$$(( i + 1 )); if [ "$$i" -ge 30 ]; then echo "db not ready after 30s" >&2; exit 1; fi; sleep 1; done; psql -U transactions -d transactions -v ON_ERROR_STOP=1 -f /create-test-database.sql >/dev/null'
 
 test: test-db
 	$(PHP_TEST) artisan test $(args)
