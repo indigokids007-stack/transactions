@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Dimension;
 use App\Models\DimensionValue;
 use App\Models\User;
+use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Database\Eloquent\Collection;
@@ -21,7 +22,7 @@ class StoreTransactionRequest extends FormRequest
     {
         return [
             'type' => ['required', Rule::enum(TransactionType::class)],
-            'amount' => ['required', 'regex:/^\d+(\.\d{1,4})?$/', 'not_in:0,0.0,0.00'],
+            'amount' => ['required', 'regex:'.Money::AMOUNT_PATTERN, 'not_in:0,0.0,0.00'],
             'currency' => ['required', 'string', 'size:3', Rule::in(array_keys(config('money.currencies')))],
             'occurred_on' => ['required', 'date', 'before_or_equal:'.now()->addDay()->toDateString()],
             'category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where('is_active', true)],
@@ -42,6 +43,7 @@ class StoreTransactionRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            $this->validateAmountInMinorUnits($validator);
             $this->validateCategoryAcceptsType($validator);
             $this->validateDimensionValues($validator);
         });
@@ -59,6 +61,7 @@ class StoreTransactionRequest extends FormRequest
     {
         return new TransactionInput(
             userId: $actor->id,
+            departmentId: $actor->department_id,
             type: TransactionType::from($this->string('type')->toString()),
             amount: $this->string('amount')->toString(),
             currency: $this->string('currency')->toString(),
@@ -97,6 +100,38 @@ class StoreTransactionRequest extends FormRequest
         }
 
         return $values;
+    }
+
+    /**
+     * The same invariant `CreateTransaction` asserts, checked here so an HTTP caller
+     * gets a 422 on the amount field instead of an unhandled exception. Amounts with
+     * more decimals than the currency carries are still accepted and rounded; what is
+     * rejected is an amount that rounds away to nothing, or one large enough to
+     * threaten the column.
+     */
+    private function validateAmountInMinorUnits(Validator $validator): void
+    {
+        if ($validator->errors()->hasAny(['amount', 'currency'])) {
+            return;
+        }
+
+        $currency = $this->string('currency')->toString();
+
+        if (! Money::isSupported($currency)) {
+            return;
+        }
+
+        $amountMinor = Money::toMinor($this->string('amount')->toString(), $currency);
+
+        if ($amountMinor <= 0) {
+            $validator->errors()->add('amount', __('errors.amount_not_positive'));
+
+            return;
+        }
+
+        if ($amountMinor > Money::MAX_MINOR) {
+            $validator->errors()->add('amount', __('errors.amount_too_large'));
+        }
     }
 
     private function validateCategoryAcceptsType(Validator $validator): void

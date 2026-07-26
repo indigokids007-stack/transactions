@@ -29,8 +29,8 @@ class TransactionsController extends Controller
 
         try {
             $transaction = $this->createTransaction->handle($request->toInput($actor), $actor);
-        } catch (UniqueConstraintViolationException) {
-            return $this->resolveRace($idempotencyKey, $actor);
+        } catch (UniqueConstraintViolationException $exception) {
+            return $this->resolveRace($idempotencyKey, $actor, $exception);
         }
 
         return $this->respond($transaction, Response::HTTP_CREATED);
@@ -50,8 +50,15 @@ class TransactionsController extends Controller
             ->first();
     }
 
-    private function resolveRace(?string $idempotencyKey, User $actor): JsonResponse
-    {
+    private function resolveRace(
+        ?string $idempotencyKey,
+        User $actor,
+        UniqueConstraintViolationException $exception,
+    ): JsonResponse {
+        if ($idempotencyKey === null) {
+            throw $exception;
+        }
+
         $winner = $this->findByIdempotencyKey($idempotencyKey, $actor);
 
         if ($winner instanceof Transaction) {

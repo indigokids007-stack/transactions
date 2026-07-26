@@ -8,6 +8,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class CreateTransaction
 {
@@ -15,12 +16,14 @@ class CreateTransaction
 
     public function handle(TransactionInput $input, User $actor): Transaction
     {
-        return DB::transaction(function () use ($input, $actor): Transaction {
+        $amountMinor = $this->convertAmount($input);
+
+        return DB::transaction(function () use ($input, $actor, $amountMinor): Transaction {
             $transaction = Transaction::create([
                 'user_id' => $input->userId,
-                'department_id' => $actor->department_id,
+                'department_id' => $input->departmentId,
                 'type' => $input->type,
-                'amount_minor' => Money::toMinor($input->amount, $input->currency),
+                'amount_minor' => $amountMinor,
                 'currency' => $input->currency,
                 'occurred_on' => $input->occurredOn,
                 'category_id' => $input->categoryId,
@@ -35,6 +38,40 @@ class CreateTransaction
 
             return $transaction->load(['category', 'user', 'department', 'dimensionValues.dimension']);
         });
+    }
+
+    /**
+     * Order independent invariants every caller must satisfy, HTTP or not. The form
+     * request checks the same things so that HTTP callers get a 422 instead of this
+     * exception, but the row can never be written without them holding.
+     */
+    private function convertAmount(TransactionInput $input): int
+    {
+        if (! Money::isSupported($input->currency)) {
+            throw new InvalidArgumentException("Transaction currency `{$input->currency}` is not supported.");
+        }
+
+        if (preg_match(Money::AMOUNT_PATTERN, $input->amount) !== 1) {
+            throw new InvalidArgumentException(
+                "Transaction amount `{$input->amount}` is not a decimal of at most ".Money::MAX_INTEGER_DIGITS.' digits.'
+            );
+        }
+
+        $amountMinor = Money::toMinor($input->amount, $input->currency);
+
+        if ($amountMinor <= 0) {
+            throw new InvalidArgumentException(
+                "Transaction amount `{$input->amount}` {$input->currency} is not a positive amount in minor units."
+            );
+        }
+
+        if ($amountMinor > Money::MAX_MINOR) {
+            throw new InvalidArgumentException(
+                "Transaction amount `{$input->amount}` {$input->currency} exceeds the maximum of ".Money::MAX_MINOR.' minor units.'
+            );
+        }
+
+        return $amountMinor;
     }
 
     /** @return array<int, array<string, int>> */

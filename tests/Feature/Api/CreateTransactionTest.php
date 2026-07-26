@@ -14,6 +14,7 @@ use App\Models\DimensionValue;
 use App\Models\Transaction;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
@@ -262,6 +263,7 @@ it('rolls the whole write back when recording the revision fails', function () {
 
     $input = new TransactionInput(
         userId: $user->id,
+        departmentId: $user->department_id,
         type: TransactionType::Expense,
         amount: '1000',
         currency: 'UZS',
@@ -275,6 +277,136 @@ it('rolls the whole write back when recording the revision fails', function () {
 
     expect(Transaction::withTrashed()->count())->toBe(0)
         ->and(DB::table('transaction_dimension_values')->count())->toBe(0);
+});
+
+it('rejects an amount too wide to survive the conversion to minor units', function () {
+    Sanctum::actingAs(User::factory()->create());
+    $category = Category::factory()->create();
+    $base = [
+        'type' => 'expense',
+        'currency' => 'UZS',
+        'occurred_on' => today()->toDateString(),
+        'category_id' => $category->id,
+    ];
+
+    $this->postJson('/api/transactions', [...$base, 'amount' => '99999999999999999999'])
+        ->assertStatus(422)->assertJsonValidationErrors('amount');
+    $this->postJson('/api/transactions', [...$base, 'amount' => '9223372036854775808'])
+        ->assertStatus(422)->assertJsonValidationErrors('amount');
+    $this->postJson('/api/transactions', [...$base, 'amount' => '18446744073709555712'])
+        ->assertStatus(422)->assertJsonValidationErrors('amount');
+    $this->postJson('/api/transactions', [...$base, 'amount' => '1000000000000000000'])
+        ->assertStatus(422)->assertJsonValidationErrors('amount');
+    $this->postJson('/api/transactions', [...$base, 'amount' => '99999999999999.99', 'currency' => 'USD'])
+        ->assertStatus(422)->assertJsonValidationErrors('amount');
+
+    expect(Transaction::count())->toBe(0);
+});
+
+it('rejects an amount that rounds away to nothing', function () {
+    Sanctum::actingAs(User::factory()->create());
+    $category = Category::factory()->create();
+    $base = [
+        'type' => 'expense',
+        'occurred_on' => today()->toDateString(),
+        'category_id' => $category->id,
+    ];
+
+    $this->postJson('/api/transactions', [...$base, 'amount' => '0.4', 'currency' => 'UZS'])
+        ->assertStatus(422)->assertJsonValidationErrors('amount');
+    $this->postJson('/api/transactions', [...$base, 'amount' => '0.001', 'currency' => 'USD'])
+        ->assertStatus(422)->assertJsonValidationErrors('amount');
+
+    expect(Transaction::count())->toBe(0);
+});
+
+it('rounds an amount carrying more decimals than the currency', function () {
+    Sanctum::actingAs(User::factory()->create());
+    $category = Category::factory()->create();
+
+    $this->postJson('/api/transactions', [
+        'type' => 'expense',
+        'amount' => '12.345',
+        'currency' => 'USD',
+        'occurred_on' => today()->toDateString(),
+        'category_id' => $category->id,
+    ])->assertCreated()->assertJsonPath('data.amount_minor', 1235);
+
+    expect(Transaction::sole()->amount_minor)->toBe(1235);
+});
+
+it('guards the amount and the currency inside the action itself', function () {
+    $user = User::factory()->create();
+    $category = Category::factory()->create();
+
+    $input = fn (string $amount, string $currency) => new TransactionInput(
+        userId: $user->id,
+        departmentId: $user->department_id,
+        type: TransactionType::Expense,
+        amount: $amount,
+        currency: $currency,
+        occurredOn: CarbonImmutable::parse('2026-07-20'),
+        categoryId: $category->id,
+    );
+
+    $action = app(CreateTransaction::class);
+
+    expect(fn () => $action->handle($input('0.4', 'UZS'), $user))
+        ->toThrow(InvalidArgumentException::class, 'is not a positive amount in minor units')
+        ->and(fn () => $action->handle($input('18446744073709555712', 'UZS'), $user))
+        ->toThrow(InvalidArgumentException::class, 'is not a decimal of at most 15 digits')
+        ->and(fn () => $action->handle($input('99999999999999.99', 'USD'), $user))
+        ->toThrow(InvalidArgumentException::class, 'exceeds the maximum')
+        ->and(fn () => $action->handle($input('1000', 'XXX'), $user))
+        ->toThrow(InvalidArgumentException::class, 'is not supported')
+        ->and(Transaction::count())->toBe(0);
+});
+
+it('snapshots the department of the owner rather than the actor', function () {
+    $sales = Department::factory()->create();
+    $warehouse = Department::factory()->create();
+    $owner = User::factory()->create(['department_id' => $sales->id]);
+    $actor = User::factory()->create(['department_id' => $warehouse->id]);
+    $category = Category::factory()->create();
+
+    $transaction = app(CreateTransaction::class)->handle(new TransactionInput(
+        userId: $owner->id,
+        departmentId: $owner->department_id,
+        type: TransactionType::Expense,
+        amount: '1000',
+        currency: 'UZS',
+        occurredOn: CarbonImmutable::parse('2026-07-20'),
+        categoryId: $category->id,
+    ), $actor);
+
+    expect($transaction->department_id)->toBe($sales->id)
+        ->and($transaction->user_id)->toBe($owner->id)
+        ->and($transaction->created_by)->toBe($actor->id)
+        ->and($transaction->revisions()->sole()->snapshot['department_id'])->toBe($sales->id);
+});
+
+it('rethrows a unique violation that no idempotency key can explain', function () {
+    Sanctum::actingAs(User::factory()->create());
+    $category = Category::factory()->create();
+
+    $failing = new class(app(RecordRevision::class)) extends CreateTransaction
+    {
+        public function handle(TransactionInput $input, User $actor): Transaction
+        {
+            throw new UniqueConstraintViolationException('pgsql', 'insert into "transactions"', [], new Exception('duplicate key'));
+        }
+    };
+
+    app()->instance(CreateTransaction::class, $failing);
+    $this->withoutExceptionHandling();
+
+    expect(fn () => $this->postJson('/api/transactions', [
+        'type' => 'expense',
+        'amount' => '1000',
+        'currency' => 'UZS',
+        'occurred_on' => today()->toDateString(),
+        'category_id' => $category->id,
+    ]))->toThrow(UniqueConstraintViolationException::class);
 });
 
 it('converts a minor unit currency through the money helper', function () {
