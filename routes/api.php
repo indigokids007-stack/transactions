@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\BootstrapController;
+use App\Http\Controllers\Api\ReportsController;
 use App\Http\Controllers\Api\TelegramAuthController;
 use App\Http\Controllers\Api\TransactionsController;
 use App\Http\Resources\UserResource;
@@ -34,4 +35,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
     Route::get('transactions/{transaction}/revisions', [TransactionsController::class, 'revisions'])
         ->whereNumber('transaction')
         ->name('transactions.revisions');
+
+    Route::get('reports/summary', [ReportsController::class, 'summary'])->name('reports.summary');
+    Route::get('reports/trend', [ReportsController::class, 'trend'])->name('reports.trend');
 });

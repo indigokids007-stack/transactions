@@ -12,4 +12,5 @@ return [
     'dimension_unknown' => ':dimension nomli oʻlcham mavjud emas.',
     'amount_required_with_currency' => 'Valyutani oʻzgartirganda summani ham koʻrsating.',
     'idempotency_key_taken' => 'Bu idempotency kaliti allaqachon ishlatilgan.',
+    'group_by_unknown' => ':group_by boʻyicha guruhlash mumkin emas.',
 ];
