@@ -62,7 +62,7 @@ it('rejects an update that carries no secret header at all', function () {
 });
 
 it('rejects every update while no secret is configured', function () {
-    config()->set('services.telegram.webhook_secret', null);
+    config()->set('services.telegram.webhook_secret', '');
 
     sendUpdate(textUpdate(111, '1000'), '')->assertStatus(403);
 });

@@ -10,6 +10,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Validation\TransactionFieldValidator;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Validation\ValidationException;
 
@@ -26,9 +27,20 @@ class ConfirmDraft
         private readonly TransactionFieldValidator $validator,
     ) {}
 
-    /** @throws ValidationException */
+    /**
+     * @throws AuthorizationException
+     * @throws ValidationException
+     */
     public function handle(EntryDraft $draft, User $user): Transaction
     {
+        // The controller only ever looks a draft up inside the caller's own drafts, so this
+        // cannot fire from there. It is asserted here for the same reason the field rules
+        // are: the action is the write, and it should not depend on its caller having
+        // checked who owns what.
+        if ($draft->user_id !== $user->id) {
+            throw new AuthorizationException('This draft belongs to another user.');
+        }
+
         $written = $this->writtenFor($draft);
 
         if ($written instanceof Transaction) {

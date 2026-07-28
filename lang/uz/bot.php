@@ -25,6 +25,7 @@ return [
     'expired' => 'Bu yozuv eskirgan. Qaytadan yuboring.',
     'choose_dimension' => ':dimension tanlang',
     'choose_category' => 'Kategoriyani tanlang',
+    'no_dimension_values' => ":dimension uchun qiymatlar sozlanmagan. Administrator bilan bog'laning.",
     'no_categories' => "Kategoriyalar hali sozlanmagan. Administrator bilan bog'laning.",
     'save_failed' => 'Saqlab bo\'lmadi: :reason',
 ];

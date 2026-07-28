@@ -176,13 +176,7 @@ class TelegramWebhookController extends Controller
             ->first();
 
         if ($missing instanceof Dimension) {
-            $this->edit(
-                $context,
-                $this->presenter->line('choose_dimension', $context->user, ['dimension' => $missing->name]),
-                $this->presenter->dimensionKeyboard($draft, $missing, $context->user),
-            );
-
-            $this->telegram->answerCallbackQuery($context->queryId);
+            $this->askForDimension($draft, $context, $missing);
 
             return;
         }
@@ -210,6 +204,29 @@ class TelegramWebhookController extends Controller
         $this->edit($context, $this->presenter->saved($transaction, $context->user));
 
         $this->telegram->answerCallbackQuery($context->queryId, $this->presenter->line('saved', $context->user));
+    }
+
+    /**
+     * A required dimension nobody has given values yet would otherwise be a dead end: the
+     * prompt would carry a keyboard whose only button is Cancel, and the entry could never
+     * be recorded. Say so, and leave the draft's own keyboard in place so the person can
+     * still change the category or cancel deliberately.
+     */
+    private function askForDimension(EntryDraft $draft, CallbackContext $context, Dimension $dimension): void
+    {
+        $hasValues = $dimension->values()->where('is_active', true)->exists();
+
+        $this->edit(
+            $context,
+            $this->presenter->line($hasValues ? 'choose_dimension' : 'no_dimension_values', $context->user, [
+                'dimension' => $dimension->name,
+            ]),
+            $hasValues
+                ? $this->presenter->dimensionKeyboard($draft, $dimension, $context->user)
+                : $this->presenter->keyboard($draft, $context->user),
+        );
+
+        $this->telegram->answerCallbackQuery($context->queryId);
     }
 
     private function chooseCategory(EntryDraft $draft, CallbackContext $context): void
