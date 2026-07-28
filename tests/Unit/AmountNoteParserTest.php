@@ -49,7 +49,39 @@ it('keeps a note that begins with a digit', function (string $text, string $amou
     ['50000 2 kishi obed', '50000', '2 kishi obed'],
     ['120000 3-avtobus', '120000', '3-avtobus'],
     ['50000 2ta non', '50000', '2ta non'],
+    ['10000 500km yo\'l', '10000', '500km yo\'l'],
+    ['1000 2', '1000', '2'],
 ]);
+
+/**
+ * The shape that matters most on a note taking bot: an amount typed with spaces and then
+ * what it was spent on. Reading `50 000 taksi` as fifty with the note `000 taksi` records
+ * a thousandth of the entry, and it is a preview someone taps straight through.
+ */
+it('refuses a number typed with spaces however the message goes on', function (string $text) {
+    expect((new AmountNoteParser)->parse($text))->toBeNull();
+})->with([
+    ['50 000 taksi'],
+    ['100 000 taksi'],
+    ['120 000 som'],
+    ['1 500 000 uy ijara'],
+    ['12 500 obed'],
+    ['100 000,50 taksi'],
+    ['100 000'],
+    ['100 000 000'],
+    ['50 000k'],
+    ['50 000-taksi'],
+]);
+
+/**
+ * The cost of anchoring on the front of the note: a note that genuinely opens with a three
+ * digit count is refused too, because nothing distinguishes it from a spaced group. The
+ * person retypes it as `5000 100ta dona` or `5000 dona 100` and the entry is recorded.
+ * This is the deliberate side of the trade, not an accident.
+ */
+it('refuses a note that opens with a three digit count', function () {
+    expect((new AmountNoteParser)->parse('5000 100 dona'))->toBeNull();
+});
 
 /**
  * A short group after the first separator is shorthand, but only when it is the only
@@ -96,7 +128,27 @@ it('refuses anything that is not plainly an amount', function (string $text) {
     'a leading part wider than a group' => ['1234.567'],
     'a short middle group' => ['1.25.000'],
     'an apostrophe as a group separator' => ["120'000"],
-    'a number continued after a space' => ['100 000'],
-    'a number continued in groups after spaces' => ['100 000 000'],
     'a suffix carrying groups' => ['1.250.000k'],
 ]);
+
+it('reads a message the way a phone sends one', function () {
+    $spaced = (new AmountNoteParser)->parse('  120000 taksi  ');
+    $wrapped = (new AmountNoteParser)->parse("1000 taksi\nChilonzor");
+    $emoji = (new AmountNoteParser)->parse('50000 taksi 🚕');
+
+    expect($spaced->amount)->toBe('120000')
+        ->and($spaced->note)->toBe('taksi')
+        ->and($wrapped->amount)->toBe('1000')
+        ->and($wrapped->note)->toBe("taksi\nChilonzor")
+        ->and($emoji->note)->toBe('taksi 🚕');
+});
+
+it('takes the widest amount the column holds and refuses the next digit', function () {
+    expect((new AmountNoteParser)->parse('123456789012345')?->amount)->toBe('123456789012345')
+        ->and((new AmountNoteParser)->parse('1234567890123456'))->toBeNull();
+});
+
+it('refuses a bot command', function () {
+    expect((new AmountNoteParser)->parse('/start'))->toBeNull()
+        ->and((new AmountNoteParser)->parse('/help'))->toBeNull();
+});

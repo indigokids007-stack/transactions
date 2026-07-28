@@ -17,17 +17,29 @@ class AmountNoteParser
      * thing another way, and there the fraction is decimal, so `1.5k` is 1500.
      *
      * A space separates nothing, so what follows the amount is the note, digits included:
-     * `1000 2 kishi` is a thousand with the note `2 kishi`. A note that is only digits and
-     * spaces is not a note but the rest of a number typed with spaces, and `100 000` is
-     * refused rather than recorded as a hundred.
+     * `1000 2 kishi` is a thousand with the note `2 kishi`. What a note may not open with
+     * is a whole group of three digits, because that is the rest of a number typed with
+     * spaces: `100 000` and `50 000 taksi` are both refused rather than recorded as a
+     * hundred and as fifty.
      */
     private const PATTERN = '/^\s*(?<digits>\d[\d.,]*)(?<suffix>[kK]?)(?<note>\s.*|)$/su';
 
     /** Digits one separator stands for, and so the width a short last group is padded to. */
     private const GROUP_SIZE = 3;
 
-    /** A "note" made only of digits and spaces is the tail of a number, not a note. */
-    private const NUMERIC_NOTE = '/^[\d\s.,]+$/u';
+    /**
+     * A note that opens with a whole group of three digits is not a note: it is the rest of
+     * a number someone typed with spaces, and reading it as a note records a thousandth of
+     * what they meant. `50 000 taksi` is refused for that reason, while `1000 2 kishi` and
+     * `50000 2ta non` are not, because `2` and `2ta` are not groups.
+     *
+     * The tell is at the front of the note, not in its shape as a whole: `50 000 taksi`
+     * ends in a word and would slip past any rule that asks whether the note is numeric.
+     * So the group has to end the way a group ends: at the end of the message, at anything
+     * that is neither letter nor digit, or at a `k` that no letter follows, which keeps
+     * `50 000k` out while leaving a note like `500km yo'l` alone.
+     */
+    private const GROUP_OPENS_NOTE = '/^\d{3}(?:$|[kK](?!\p{L})|[^\p{L}\d])/u';
 
     public function parse(string $text): ?ParsedEntry
     {
@@ -43,7 +55,7 @@ class AmountNoteParser
 
         $note = trim($matches['note']);
 
-        if ($note !== '' && preg_match(self::NUMERIC_NOTE, $note) === 1) {
+        if (preg_match(self::GROUP_OPENS_NOTE, $note) === 1) {
             return null;
         }
 
