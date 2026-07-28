@@ -40,6 +40,7 @@ return [
         'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
         'init_data_ttl' => (int) env('TELEGRAM_INIT_DATA_TTL', 300),
         'api_url' => env('TELEGRAM_API_URL', 'https://api.telegram.org'),
+        'mini_app_url' => env('TELEGRAM_MINI_APP_URL'),
     ],
 
 ];

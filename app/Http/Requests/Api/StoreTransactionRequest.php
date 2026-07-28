@@ -33,25 +33,7 @@ class StoreTransactionRequest extends FormRequest
 
     public function withValidator(Validator $validator): void
     {
-        $validator->after(function (Validator $validator): void {
-            if (! $validator->errors()->hasAny(['amount', 'currency'])) {
-                $this->validateAmountInMinorUnits(
-                    $validator,
-                    $this->string('amount')->toString(),
-                    $this->string('currency')->toString(),
-                );
-            }
-
-            if (! $validator->errors()->hasAny(['type', 'category_id'])) {
-                $this->validateCategoryAcceptsType(
-                    $validator,
-                    $this->integer('category_id'),
-                    TransactionType::tryFrom($this->string('type')->toString()),
-                );
-            }
-
-            $this->validateDimensionValues($validator);
-        });
+        $this->applyCreateChecks($validator);
     }
 
     public function toInput(User $actor): TransactionInput

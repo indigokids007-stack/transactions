@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /*
@@ -46,6 +47,45 @@ expect()->extend('toBeOne', function () {
 | global functions to help you to reduce the number of lines of code in your test files.
 |
 */
+
+/**
+ * Post a Telegram update at the webhook the way Telegram does, secret header included.
+ *
+ * @param  array<string, mixed>  $update
+ */
+function sendUpdate(array $update, string $secret = 'hook-secret'): TestResponse
+{
+    return test()->withHeader('X-Telegram-Bot-Api-Secret-Token', $secret)
+        ->postJson('/telegram/webhook', $update);
+}
+
+/** @return array<string, mixed> */
+function textUpdate(int $telegramId, string $text): array
+{
+    return [
+        'update_id' => 1,
+        'message' => [
+            'message_id' => 10,
+            'chat' => ['id' => $telegramId],
+            'from' => ['id' => $telegramId, 'first_name' => 'Alisher', 'language_code' => 'uz'],
+            'text' => $text,
+        ],
+    ];
+}
+
+/** @return array<string, mixed> */
+function callbackUpdate(int $telegramId, string $data): array
+{
+    return [
+        'update_id' => 2,
+        'callback_query' => [
+            'id' => 'cb-1',
+            'from' => ['id' => $telegramId, 'first_name' => 'Alisher', 'language_code' => 'uz'],
+            'message' => ['message_id' => 42, 'chat' => ['id' => $telegramId]],
+            'data' => $data,
+        ],
+    ];
+}
 
 /**
  * Build a signed Telegram `initData` query string, the way the Telegram client does.

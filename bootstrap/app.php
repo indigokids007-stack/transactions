@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias(['active' => EnsureUserIsActive::class]);
 
+        // Telegram posts the webhook with no session behind it; its own shared secret
+        // header is what authenticates the call.
+        $middleware->validateCsrfTokens(except: ['telegram/webhook']);
+
         // A deactivated caller must be turned away before a scoped binding resolves,
         // otherwise the 404 it would get for a record outside its scope tells it apart
         // from the 403 it gets for one inside.
