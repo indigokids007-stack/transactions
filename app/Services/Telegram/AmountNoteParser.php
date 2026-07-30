@@ -35,6 +35,10 @@ class AmountNoteParser
         'million' => 6,
         'millon' => 6,
         'миллион' => 6,
+        'mlrd' => 9,
+        'млрд' => 9,
+        'milliard' => 9,
+        'миллиард' => 9,
     ];
 
     /**
@@ -44,22 +48,15 @@ class AmountNoteParser
     private const NUMERIC_REMAINDER = '/^[0-9., ]+$/';
 
     /**
-     * A note whose first word is only digits is a number typed in pieces whose tail is being
-     * read as a note: `100 00 obed` means 10000, and recording 100 with the note `00 obed`
-     * loses two orders of magnitude. Two or more digits is always that shape, and so is a
-     * bare zero, which counts nothing. One to nine stays a count, so `1000 2 kishi` and
-     * `50000 2 kishi obed` still record. `50000 12 kishi` refusing is the accepted cost.
+     * A note that opens with two or more digits, whatever follows them, is a number typed in
+     * pieces whose tail is being read as a note: `100 00 obed` means 10000, `50 00som` means
+     * 5000, and `50 000so'm` means 50000. Recording the leading piece loses orders of
+     * magnitude. A bare zero opens nothing countable either. One to nine stays a count, so
+     * `1000 2 kishi`, `50000 2ta non` and `120000 3-avtobus` still record; `50000 12 kishi`,
+     * `1000 25ta` and `500km yo'l` refusing is the deliberate cost, because nothing
+     * distinguishes a genuine count of ten or more from a mistyped group.
      */
-    private const DIGIT_WORD_OPENS_NOTE = '/^(?:[0-9]{2,}|0)(?: |$)/';
-
-    /**
-     * A remainder that opens with three consecutive digits is the rest of an amount typed
-     * with spaces, whatever follows the digits: `50 000so'm`, `50 000-taksi`, `50 000k`.
-     * Reading it as a note records a thousandth of what was meant. A genuine note that
-     * opens with three digits, like `500km yo'l`, refuses with them; that trade is
-     * deliberate, because nothing distinguishes it from a spaced group.
-     */
-    private const GROUP_OPENS_REMAINDER = '/^[0-9]{3}/';
+    private const DIGITS_OPEN_NOTE = '/^(?:[0-9]{2}|0)/';
 
     public function parse(string $text): ?ParsedEntry
     {
@@ -75,11 +72,7 @@ class AmountNoteParser
             return null;
         }
 
-        if (preg_match(self::DIGIT_WORD_OPENS_NOTE, $note) === 1) {
-            return null;
-        }
-
-        if (preg_match(self::GROUP_OPENS_REMAINDER, $note) === 1) {
+        if (preg_match(self::DIGITS_OPEN_NOTE, $note) === 1) {
             return null;
         }
 
