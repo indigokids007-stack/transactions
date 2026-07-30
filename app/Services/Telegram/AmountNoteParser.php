@@ -26,6 +26,7 @@ class AmountNoteParser
      */
     private const MAGNITUDES = [
         'k' => 3,
+        'к' => 3,
         'ming' => 3,
         'mingta' => 3,
         'минг' => 3,
@@ -158,14 +159,20 @@ class AmountNoteParser
 
     /**
      * A one-letter magnitude cannot stand in an alternation unguarded: `k` would match inside
-     * `kishi`, `kg`, `km`, `kun` and `kerak`, so it carries a lookahead that a whole word does
-     * not need. The lookahead is what protects those notes. `k` used to be excluded from the
-     * note rules and re-added as a literal in the token pattern instead, and that divergence
-     * is exactly what let `5 kishi 2k` record 5 and `1 mln 5k` drop its second term.
+     * `kishi`, `kg`, `km`, `kun` and `kerak`, and its Cyrillic twin `к` inside `кг`, `км`,
+     * `кун`, `керак`, `китоб` and `картошка`, so a one-letter entry carries a lookahead that a
+     * whole word does not need. The lookahead is what protects those notes. `k` used to be
+     * excluded from the note rules and re-added as a literal in the token pattern instead, and
+     * that divergence is exactly what let `5 kishi 2k` record 5 and `1 mln 5k` drop its second
+     * term.
+     *
+     * The length is counted in characters, not bytes. `к` is one character and two bytes, so a
+     * byte count would hand every Cyrillic one-letter magnitude an unguarded fragment and
+     * refuse every ordinary Cyrillic note word beginning with it.
      */
     private function magnitudeFragment(string $word): string
     {
-        return strlen($word) === 1
+        return mb_strlen($word) === 1
             ? $word.'(?![\p{L}0-9])'
             : $word;
     }
