@@ -115,7 +115,7 @@ class AmountNoteParser
      */
     private function tokenPattern(): string
     {
-        return '/^(?<token>[0-9.,]+)(?<magnitude> *(?:k|'.$this->magnitudeAlternation().'))?(?<remainder> .*|)$/iu';
+        return '/^(?<token>[0-9.,]+)(?<magnitude> *(?:'.$this->magnitudeAlternation().'))?(?<remainder> .*|)$/iu';
     }
 
     /**
@@ -133,8 +133,7 @@ class AmountNoteParser
     /**
      * A note opening with a magnitude the token could not swallow is a magnitude this grammar
      * cannot read: `2 mln.`, `30 тыс.`, `30 minglab`, `50 mingga`. Recording the bare leading
-     * count would be the very disaster the magnitudes exist to prevent, so it refuses. `k` is
-     * left out on purpose, because notes legitimately open with `kishi`, `kg` and `kartoshka`.
+     * count would be the very disaster the magnitudes exist to prevent, so it refuses.
      */
     private function magnitudeOpensNote(string $note): bool
     {
@@ -142,17 +141,33 @@ class AmountNoteParser
     }
 
     /**
-     * Both magnitude rules are built from the one table, so a word can never be added to a
-     * rule and forgotten in the other. Longest first, so the alternation reads the way it
-     * matches rather than leaning on backtracking.
+     * The one alternation every magnitude rule reads: the token pattern that swallows a
+     * magnitude, and the two note rules that refuse one the token could not. Every entry of
+     * the table appears in all three, so a magnitude cannot be a magnitude to one rule and
+     * invisible to another. Longest first, so the alternation reads the way it matches rather
+     * than leaning on backtracking.
      */
     private function magnitudeAlternation(): string
     {
-        $words = array_values(array_diff(array_keys(self::MAGNITUDES), ['k']));
+        $words = array_keys(self::MAGNITUDES);
 
         usort($words, static fn (string $word, string $other): int => strlen($other) <=> strlen($word));
 
-        return implode('|', $words);
+        return implode('|', array_map($this->magnitudeFragment(...), $words));
+    }
+
+    /**
+     * A one-letter magnitude cannot stand in an alternation unguarded: `k` would match inside
+     * `kishi`, `kg`, `km`, `kun` and `kerak`, so it carries a lookahead that a whole word does
+     * not need. The lookahead is what protects those notes. `k` used to be excluded from the
+     * note rules and re-added as a literal in the token pattern instead, and that divergence
+     * is exactly what let `5 kishi 2k` record 5 and `1 mln 5k` drop its second term.
+     */
+    private function magnitudeFragment(string $word): string
+    {
+        return strlen($word) === 1
+            ? $word.'(?![\p{L}0-9])'
+            : $word;
     }
 
     /**
