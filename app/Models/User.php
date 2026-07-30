@@ -6,6 +6,8 @@ namespace App\Models;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use Database\Factories\UserFactory;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -14,7 +16,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
@@ -90,5 +92,14 @@ class User extends Authenticatable
     public function isActive(): bool
     {
         return $this->status === UserStatus::Active;
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        if (! $this->isActive()) {
+            return false;
+        }
+
+        return in_array($this->role, [UserRole::Admin, UserRole::Owner], true);
     }
 }
