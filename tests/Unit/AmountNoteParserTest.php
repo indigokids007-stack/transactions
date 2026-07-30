@@ -167,7 +167,23 @@ it('reads an amount and a note, or refuses', function (string $text, ?string $am
 
     'suffix a space apart' => ['30 k', '30000'],
     'uppercase suffix a space apart' => ['30 K', '30000'],
-    'suffix a space apart then a note' => ['30 k taksi', '30000', 'taksi'],
+    // A spaced one-letter magnitude carrying a note is a sentence, not an amount: `к` is an
+    // everyday Russian preposition and `k` an everyday abbreviation. Bare, both still record.
+    'spaced suffix carrying a note' => ['30 k taksi', null],
+    'spaced suffix carrying a note after a small count' => ['5 к taksi', null],
+    'spaced cyrillic suffix before a relative' => ['5000 к маме', null],
+    'spaced cyrillic suffix before a payment word' => ['5000 к оплате', null],
+    'spaced cyrillic suffix before a birthday' => ['50000 к дню рождения', null],
+    'spaced cyrillic suffix before a holiday' => ['100000 к празднику', null],
+    'spaced cyrillic suffix before the end of the day' => ['2000 к концу дня', null],
+    'spaced cyrillic suffix before a taxi' => ['120000 к такси', null],
+    'spaced latin suffix before a taxi' => ['5000 k taksi', null],
+    'spaced latin suffix before a school' => ['5000 k maktab', null],
+    'glued suffix carrying a note stands' => ['50k taksi', '50000', 'taksi'],
+    'glued cyrillic suffix carrying a note stands' => ['50к taksi', '50000', 'taksi'],
+    'glued cyrillic suffix with a fraction carrying a note stands' => ['1.5к taksi', '1500', 'taksi'],
+    'word magnitude carrying a note stands' => ['30 ming taksi', '30000', 'taksi'],
+    'cyrillic word magnitude carrying a note stands' => ['5 млн такси', '5000000', 'такси'],
     'lone letter is not a suffix' => ['2 m', '2', 'm'],
     'suffix letter opening a note word' => ['3 kg', '3', 'kg'],
 

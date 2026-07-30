@@ -108,15 +108,27 @@ class AmountNoteParser
     }
 
     /**
-     * The amount token is a run of digits and separators, optionally multiplied by a magnitude
-     * that may be glued to it or stand a space apart, and only a space or the end of the
-     * message may follow, so `120000taksi` and `2mlnsom` refuse rather than split, while
-     * `3 kg` reads as three with the note `kg` because `g` is neither. The remainder
-     * alternates with the empty string so the group always takes part in the match.
+     * The amount token is a run of digits and separators, optionally multiplied by a magnitude,
+     * and only a space or the end of the message may follow, so `120000taksi` and `2mlnsom`
+     * refuse rather than split, while `3 kg` reads as three with the note `kg` because `g` is
+     * neither. The remainder alternates with the empty string so the group always takes part in
+     * the match.
+     *
+     * A magnitude reaches the digits three ways, and the third is narrower than the others on
+     * purpose. Glued, any magnitude reads and may carry a note: `50к taksi`. A space apart, a
+     * whole word reads and may carry a note: `30 ming taksi`. A space apart, a one-letter
+     * magnitude reads only when nothing follows it, because `к` is one of the commonest Russian
+     * prepositions and `k` an equally ordinary abbreviation, so `5000 к маме` and
+     * `5000 k taksi` are sentences and not amounts. The ruled `30 k` and `2 к` still record;
+     * every other spaced shape falls into the note, where the note rules refuse it.
      */
     private function tokenPattern(): string
     {
-        return '/^(?<token>[0-9.,]+)(?<magnitude> *(?:'.$this->magnitudeAlternation().'))?(?<remainder> .*|)$/iu';
+        $letters = $this->letterAlternation();
+
+        return '/^(?<token>[0-9.,]+)(?<magnitude>(?:'.$letters.')'
+            .'| *(?:'.$this->wordAlternation().')'
+            .'| +(?:'.$letters.')(?=$))?(?<remainder> .*|)$/iu';
     }
 
     /**
@@ -142,39 +154,56 @@ class AmountNoteParser
     }
 
     /**
-     * The one alternation every magnitude rule reads: the token pattern that swallows a
-     * magnitude, and the two note rules that refuse one the token could not. Every entry of
-     * the table appears in all three, so a magnitude cannot be a magnitude to one rule and
-     * invisible to another. Longest first, so the alternation reads the way it matches rather
-     * than leaning on backtracking.
+     * The one alternation both note rules read: every entry of the table, so a magnitude cannot
+     * be a magnitude to one rule and invisible to another. The token pattern reads the same two
+     * halves separately, because a spaced one-letter magnitude is narrower there; it names no
+     * magnitude of its own.
      */
     private function magnitudeAlternation(): string
     {
-        $words = array_keys(self::MAGNITUDES);
-
-        usort($words, static fn (string $word, string $other): int => strlen($other) <=> strlen($word));
-
-        return implode('|', array_map($this->magnitudeFragment(...), $words));
+        return $this->letterAlternation().'|'.$this->wordAlternation();
     }
 
     /**
-     * A one-letter magnitude cannot stand in an alternation unguarded: `k` would match inside
-     * `kishi`, `kg`, `km`, `kun` and `kerak`, and its Cyrillic twin `к` inside `кг`, `км`,
-     * `кун`, `керак`, `китоб` and `картошка`, so a one-letter entry carries a lookahead that a
-     * whole word does not need. The lookahead is what protects those notes. `k` used to be
-     * excluded from the note rules and re-added as a literal in the token pattern instead, and
-     * that divergence is exactly what let `5 kishi 2k` record 5 and `1 mln 5k` drop its second
-     * term.
+     * The one-character entries, each guarded by a lookahead, because `k` would otherwise match
+     * inside `kishi`, `kg`, `km`, `kun` and `kerak`, and its Cyrillic twin `к` inside `кг`,
+     * `км`, `кун`, `керак`, `китоб` and `картошка`. The lookahead is what protects those notes.
+     * `k` used to be excluded from the note rules and re-added as a literal in the token pattern
+     * instead, and that divergence is exactly what let `5 kishi 2k` record 5.
      *
-     * The length is counted in characters, not bytes. `к` is one character and two bytes, so a
-     * byte count would hand every Cyrillic one-letter magnitude an unguarded fragment and
-     * refuse every ordinary Cyrillic note word beginning with it.
+     * Length is counted in characters, not bytes. `к` is one character and two bytes, so a byte
+     * count would hand every non-ASCII one-letter magnitude an unguarded fragment and refuse
+     * every ordinary note word beginning with it.
      */
-    private function magnitudeFragment(string $word): string
+    private function letterAlternation(): string
     {
-        return mb_strlen($word) === 1
-            ? $word.'(?![\p{L}0-9])'
-            : $word;
+        $letters = array_filter(
+            array_keys(self::MAGNITUDES),
+            static fn (string $word): bool => mb_strlen($word) === 1
+        );
+
+        return implode('|', array_map(
+            static fn (string $letter): string => $letter.'(?![\p{L}0-9])',
+            $letters
+        ));
+    }
+
+    /**
+     * The entries of two characters or more, longest first so the alternation reads the way it
+     * matches rather than leaning on backtracking. A whole word needs no lookahead, because the
+     * token rule already demands a space or the end of the message after a magnitude and the
+     * note rules refuse whatever the token rule could not swallow.
+     */
+    private function wordAlternation(): string
+    {
+        $words = array_values(array_filter(
+            array_keys(self::MAGNITUDES),
+            static fn (string $word): bool => mb_strlen($word) > 1
+        ));
+
+        usort($words, static fn (string $word, string $other): int => strlen($other) <=> strlen($word));
+
+        return implode('|', $words);
     }
 
     /**
