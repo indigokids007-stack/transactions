@@ -19,22 +19,31 @@ class AmountNoteParser
     private const GROUP_SIZE = 3;
 
     /**
-     * What multiplies an amount, mapped to the zeros it appends. `k` is the glued shorthand
-     * for a thousand; the words are what people type in Uzbek and in Russian, and `30 ming`
-     * is as ordinary as `30k`.
+     * What multiplies an amount, mapped to the zeros it appends. `k` is the shorthand for a
+     * thousand; the words are what people type in Uzbek and in Russian, in Latin and in
+     * Cyrillic, spelt well and spelt badly, and `30 ming` is as ordinary as `30k`. Every
+     * missing spelling is a live thousandfold error, so the table is generous on purpose.
      */
     private const MAGNITUDES = [
         'k' => 3,
         'ming' => 3,
         'mingta' => 3,
+        'минг' => 3,
+        'мингта' => 3,
         'тыс' => 3,
         'тысяч' => 3,
         'тысяча' => 3,
+        'тыщ' => 3,
+        'тыща' => 3,
+        'тыщи' => 3,
         'mln' => 6,
         'млн' => 6,
         'million' => 6,
         'millon' => 6,
         'миллион' => 6,
+        'миллон' => 6,
+        'мильон' => 6,
+        'лям' => 6,
         'mlrd' => 9,
         'млрд' => 9,
         'milliard' => 9,
@@ -80,6 +89,10 @@ class AmountNoteParser
             return null;
         }
 
+        if ($this->magnitudeQualifiesNoteNumber($note)) {
+            return null;
+        }
+
         $amount = $this->amountFromToken($matches['token'], $matches['magnitude'] ?? '');
 
         if ($amount === null) {
@@ -94,14 +107,27 @@ class AmountNoteParser
     }
 
     /**
-     * The amount token is a run of digits and separators, optionally multiplied by `k` glued
-     * to it or by a magnitude word that may stand apart from it, and only a space or the end
-     * of the message may follow, so `120000taksi` and `2mlnsom` refuse rather than split. The
-     * remainder alternates with the empty string so the group always takes part in the match.
+     * The amount token is a run of digits and separators, optionally multiplied by a magnitude
+     * that may be glued to it or stand a space apart, and only a space or the end of the
+     * message may follow, so `120000taksi` and `2mlnsom` refuse rather than split, while
+     * `3 kg` reads as three with the note `kg` because `g` is neither. The remainder
+     * alternates with the empty string so the group always takes part in the match.
      */
     private function tokenPattern(): string
     {
-        return '/^(?<token>[0-9.,]+)(?<magnitude>k| *(?:'.$this->magnitudeAlternation().'))?(?<remainder> .*|)$/iu';
+        return '/^(?<token>[0-9.,]+)(?<magnitude> *(?:k|'.$this->magnitudeAlternation().'))?(?<remainder> .*|)$/iu';
+    }
+
+    /**
+     * A note holding a digit run followed by a magnitude carries part of the amount: the
+     * second term of `1 mln 5 ming`, which means 1005000 and not 1000000, or the real amount
+     * behind a leading count in `3 kg 2 mln`. The note-outweighs rule cannot see either,
+     * because the note's bare digits are small. Adding the terms together, or picking one,
+     * would be guessing, so it refuses; `1.5 mlrd` says the same thing in one term.
+     */
+    private function magnitudeQualifiesNoteNumber(string $note): bool
+    {
+        return preg_match('/[0-9] *(?:'.$this->magnitudeAlternation().')/iu', $note) === 1;
     }
 
     /**
