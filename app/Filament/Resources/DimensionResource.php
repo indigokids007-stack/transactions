@@ -32,10 +32,11 @@ class DimensionResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquare3Stack3d;
 
     /**
-     * The reports API rejects `group_by=dimension:<key>` once the key pushes it past 64
-     * characters, so a longer key would save here but be silently unusable in a report.
+     * `group_by` is capped at 64 characters in the reports API, and `dimension:` costs 10 of
+     * those before the key even starts, leaving 54. A key saved past that bound would be valid
+     * here and permanently unusable as `group_by=dimension:<key>` in a report.
      */
-    private const MAX_KEY_LENGTH = 64;
+    private const MAX_KEY_LENGTH = 54;
 
     public static function form(Schema $schema): Schema
     {

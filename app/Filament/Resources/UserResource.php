@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Filament\Resources\Concerns\RestrictsMutationsToAdmin;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
 use App\Filament\Support\PanelUser;
 use App\Models\User;
@@ -27,10 +28,16 @@ use Illuminate\Support\Collection;
  */
 class UserResource extends Resource
 {
+    use RestrictsMutationsToAdmin;
+
     protected static ?string $model = User::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
 
+    /**
+     * Overrides the trait: nobody creates a user through the panel, admin included — they
+     * only ever arrive through the bot.
+     */
     public static function canCreate(): bool
     {
         return false;

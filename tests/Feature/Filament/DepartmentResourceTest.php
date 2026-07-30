@@ -60,7 +60,15 @@ it('forbids an owner from opening the edit page directly', function () {
 it('hides the create action from an owner and refuses it even mounted directly', function () {
     $this->actingAs(User::factory()->create(['role' => UserRole::Owner]));
 
-    Livewire::test(ListDepartments::class)->assertActionHidden('create');
+    Livewire::test(ListDepartments::class)
+        ->assertActionHidden('create')
+        ->mountAction('create')
+        // Naming the schema explicitly: with the action disabled, `getMountedActionSchemaName()`
+        // is null, so the generic `fillForm()`/`setActionData()` fallback would land on whatever
+        // schema `getDefaultTestingSchemaName()` guesses instead of the (still cached) action
+        // schema — not the no-op it looks like.
+        ->fillForm(['name' => 'Owner Attempt'], 'mountedActionSchema0')
+        ->callMountedAction();
 
     expect(Department::count())->toBe(0);
 });

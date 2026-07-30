@@ -25,8 +25,13 @@ it('shows the current setting to an owner but refuses the save action even mount
     Livewire::test(ManageSettings::class)
         ->assertFormFieldIsDisabled('registration_open')
         ->assertActionHidden('save')
+        // `setActionData()` targets the mounted action's own schema, which the `save` action
+        // does not have — the toggle lives on the page's `form`, filled at `mount()`. Filling
+        // it here, before mounting a hidden (and therefore never actually mounted) action, is
+        // what makes the assertion below meaningful: if the `visible()` guard were removed,
+        // this is the value `save()` would read and persist.
+        ->fillForm(['registration_open' => false])
         ->mountAction('save')
-        ->setActionData(['registration_open' => false])
         ->callMountedAction();
 
     expect(Setting::get('registration_open'))->toBeTrue();

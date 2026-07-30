@@ -28,7 +28,7 @@ it('refuses a dimension key longer than the reports API can group by', function 
     $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
 
     Livewire::test(CreateDimension::class)
-        ->fillForm(['key' => str_repeat('k', 65), 'name' => 'Uzun'])
+        ->fillForm(['key' => str_repeat('k', 55), 'name' => 'Uzun'])
         ->call('create')
         ->assertHasFormErrors(['key']);
 
@@ -39,7 +39,7 @@ it('accepts a dimension key at exactly the reports API limit', function () {
     $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
 
     Livewire::test(CreateDimension::class)
-        ->fillForm(['key' => str_repeat('k', 64), 'name' => 'Chegara'])
+        ->fillForm(['key' => str_repeat('k', 54), 'name' => 'Chegara'])
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -111,8 +111,13 @@ it('hides dimension value mutations from an owner and refuses them even mounted 
         ->assertTableActionHidden('create')
         ->assertTableActionHidden('edit', $value)
         ->assertTableActionHidden('delete', $value)
-        ->mountTableAction('edit', $value)
+        ->mountTableAction('create')
+        // `setTableActionData()` resolves its target schema through
+        // `getDefaultTestingSchemaName()`, which (with no action actually mounted, since it was
+        // disabled) falls back to the table's *filters* form instead of the action's own — so
+        // this names the mounted action's schema explicitly rather than fill the wrong one.
+        ->fillForm(['name' => 'Owner Attempt', 'is_active' => true, 'sort' => 0], 'mountedActionSchema0')
         ->callMountedTableAction();
 
-    expect($value->fresh()->name)->toBe('Original');
+    expect($dimension->values()->where('name', 'Owner Attempt')->exists())->toBeFalse();
 });
