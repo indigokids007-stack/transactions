@@ -24,19 +24,20 @@ function pad(value: number): string {
 }
 
 function isoDate(date: Date): string {
-  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 // The calendar month `monthOffset` months from `clock`'s month (0 = the month `clock`
-// falls in, -1 = the one before). Built from `clock`'s UTC year and month only — never
-// its day-of-month — so the picker's answer does not depend on which day it opened on,
-// and every arithmetic step stays in UTC so a local timezone can never shift a date
-// across midnight into the wrong day.
+// falls in, -1 = the one before). Built from `clock`'s LOCAL year and month only — never
+// its day-of-month — so the picker's answer does not depend on which day it opened on.
+// Every arithmetic step stays in local time deliberately: Uzbekistan is UTC+5, and a
+// report opened near local midnight must land in the month the viewer is actually in,
+// not whatever month UTC still reads at that instant.
 function monthBounds(clock: Date, monthOffset: number): PeriodRange {
-  const year = clock.getUTCFullYear()
-  const month = clock.getUTCMonth() + monthOffset
-  const start = new Date(Date.UTC(year, month, 1))
-  const end = new Date(Date.UTC(year, month + 1, 0))
+  const year = clock.getFullYear()
+  const month = clock.getMonth() + monthOffset
+  const start = new Date(year, month, 1)
+  const end = new Date(year, month + 1, 0)
 
   return { from: isoDate(start), to: isoDate(end) }
 }

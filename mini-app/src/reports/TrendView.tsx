@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ApiClient } from '../api/client'
 import type { TrendReport } from '../api/types'
 import { strings } from '../strings'
@@ -6,6 +6,7 @@ import { EmptyState } from '../ui/EmptyState'
 import { ErrorState } from '../ui/ErrorState'
 import { TrendSection, type TrendPoint } from './TrendSection'
 import type { PeriodRange } from './usePeriod'
+import { useReportFetch } from './useReportFetch'
 
 export type TrendInterval = 'day' | 'week' | 'month'
 
@@ -69,26 +70,11 @@ function trendByCurrency(report: TrendReport): CurrencyTrend[] {
 // per-period series happens at render time.
 export function TrendView({ client, period, chartWidth, chartHeight }: TrendViewProps) {
   const [interval, setIntervalValue] = useState<TrendInterval>('day')
-  const [report, setReport] = useState<TrendReport | null>(null)
-  const [failed, setFailed] = useState(false)
 
-  useEffect(() => {
-    let ignore = false
-    setFailed(false)
-
-    client
-      .trend({ from: period.from, to: period.to, interval })
-      .then((result) => {
-        if (!ignore) setReport(result)
-      })
-      .catch(() => {
-        if (!ignore) setFailed(true)
-      })
-
-    return () => {
-      ignore = true
-    }
-  }, [client, period.from, period.to, interval])
+  const { data: report, failed, rateLimited, retry } = useReportFetch<TrendReport>(
+    () => client.trend({ from: period.from, to: period.to, interval }),
+    [client, period.from, period.to, interval],
+  )
 
   const buckets = useMemo(() => (report ? trendByCurrency(report) : []), [report])
 
@@ -110,7 +96,13 @@ export function TrendView({ client, period, chartWidth, chartHeight }: TrendView
   )
 
   if (failed) {
-    return <ErrorState message={strings.reports.loadFailed} />
+    return (
+      <ErrorState
+        message={rateLimited ? strings.reports.rateLimited : strings.reports.loadFailed}
+        actionLabel={strings.common.retry}
+        onAction={retry}
+      />
+    )
   }
 
   if (report && buckets.length === 0) {

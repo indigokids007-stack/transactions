@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { StaffView } from './StaffView'
 import { strings } from '../strings'
 import { clientReturning } from '../test/fixtures'
@@ -131,4 +132,33 @@ it("never lets one currency's ranking absorb another currency's rows", async () 
   expect(within(uzs).queryByText('Davron')).not.toBeInTheDocument()
   expect(within(usd).queryByText('Bekzod')).not.toBeInTheDocument()
   expect(within(usd).queryByText('Alisher')).not.toBeInTheDocument()
+})
+
+// The review's finding: a failed request used to render a dead end with no action.
+it('offers a retry action when the request fails, and retrying refetches', async () => {
+  const client = clientReturning(report)
+  client.summary = vi
+    .fn()
+    .mockRejectedValueOnce({ status: 500, message: 'Server exploded.' })
+    .mockResolvedValueOnce(report)
+
+  render(<StaffView client={client} period={period} />)
+
+  expect(await screen.findByText(strings.reports.loadFailed)).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: strings.common.retry }))
+
+  await screen.findAllByTestId('staff-row')
+  expect(client.summary).toHaveBeenCalledTimes(2)
+})
+
+// The other half of the same finding: a 429 must read as "too many requests, try again
+// in a moment", not the generic failure message.
+it('shows a specific message for a 429, not the generic failure', async () => {
+  const client = clientReturning(report)
+  client.summary = vi.fn().mockRejectedValue({ status: 429, message: 'Too Many Requests' })
+
+  render(<StaffView client={client} period={period} />)
+
+  expect(await screen.findByText(strings.reports.rateLimited)).toBeInTheDocument()
+  expect(screen.queryByText(strings.reports.loadFailed)).not.toBeInTheDocument()
 })

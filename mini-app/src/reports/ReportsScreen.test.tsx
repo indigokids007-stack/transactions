@@ -1,10 +1,11 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ReportsScreen } from './ReportsScreen'
 import { strings } from '../strings'
 import { clientStub, managerUser, staffUser } from '../test/fixtures'
-import type { SummaryReport, TrendReport } from '../api/types'
-import type { Period } from './usePeriod'
+import type { ApiClient } from '../api/client'
+import type { ApiUser, SummaryReport, TrendReport } from '../api/types'
+import { usePeriod, type Period } from './usePeriod'
 
 const period: Period = {
   from: '2026-07-01',
@@ -103,4 +104,45 @@ it('never fetches the staff comparison for a user who cannot see others', async 
   await screen.findByTestId('currency-UZS')
 
   expect(client.summary).not.toHaveBeenCalledWith(expect.objectContaining({ group_by: 'user' }))
+})
+
+// A real `usePeriod`, not the fixed stub the tests above use, so the picker's own
+// `setRange` wiring is exercised end to end: the review's finding was that nothing
+// reached `setRange` from Reports at all.
+function ScreenWithRealPeriod({ user, client }: { user: ApiUser; client: ApiClient }) {
+  const period = usePeriod(new Date('2026-07-15T00:00:00Z'))
+  return <ReportsScreen user={user} client={client} period={period} dimensions={[]} />
+}
+
+it('sends a chosen custom range to the summary report', async () => {
+  const client = clientStub({ summary: vi.fn().mockResolvedValue(summary), trend: vi.fn().mockResolvedValue(trend) })
+  render(<ScreenWithRealPeriod user={managerUser} client={client} />)
+
+  await screen.findByTestId('currency-UZS')
+
+  await userEvent.click(screen.getByRole('button', { name: strings.reports.customRange }))
+  fireEvent.change(screen.getByLabelText(strings.reports.rangeFrom), { target: { value: '2026-01-05' } })
+  fireEvent.change(screen.getByLabelText(strings.reports.rangeTo), { target: { value: '2026-01-20' } })
+
+  await waitFor(() =>
+    expect(client.summary).toHaveBeenLastCalledWith(
+      expect.objectContaining({ from: '2026-01-05', to: '2026-01-20' }),
+    ),
+  )
+})
+
+// The review's other half of the same finding: an invalid range must never reach the
+// api, not merely be corrected somewhere downstream.
+it('refuses an invalid custom range before making any request', async () => {
+  const client = clientStub({ summary: vi.fn().mockResolvedValue(summary), trend: vi.fn().mockResolvedValue(trend) })
+  render(<ScreenWithRealPeriod user={managerUser} client={client} />)
+
+  await screen.findByTestId('currency-UZS')
+  expect(client.summary).toHaveBeenCalledTimes(1)
+
+  await userEvent.click(screen.getByRole('button', { name: strings.reports.customRange }))
+  fireEvent.change(screen.getByLabelText(strings.reports.rangeTo), { target: { value: '2026-01-01' } })
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(strings.reports.rangeInvalid)
+  expect(client.summary).toHaveBeenCalledTimes(1)
 })

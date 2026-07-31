@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HistoryScreen } from './HistoryScreen'
 import { strings } from '../strings'
@@ -107,6 +107,26 @@ it('reaches the api with the chosen category, currency and dimension filters', a
   await waitFor(() =>
     expect(client.listTransactions).toHaveBeenLastCalledWith(
       expect.objectContaining({ category_id: 7, currency: 'USD', dimension: { branch: 9 } }),
+    ),
+  )
+})
+
+// The same picker Reports uses (`PeriodPicker`'s custom range, wired to `usePeriod`'s
+// `setRange`) is shared here, so a range History's own filters can't reach was the
+// review's finding just as much for the ledger as for the reports.
+it('sends a chosen custom range to the transaction list', async () => {
+  const client = clientWithTransactions([transaction])
+  render(<HistoryScreen client={client} bootstrap={bootstrapFixture} user={ownerOfTransaction} />)
+
+  await screen.findByTestId('transaction-1')
+
+  await userEvent.click(screen.getByRole('button', { name: strings.reports.customRange }))
+  fireEvent.change(screen.getByLabelText(strings.reports.rangeFrom), { target: { value: '2026-01-05' } })
+  fireEvent.change(screen.getByLabelText(strings.reports.rangeTo), { target: { value: '2026-01-20' } })
+
+  await waitFor(() =>
+    expect(client.listTransactions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ from: '2026-01-05', to: '2026-01-20' }),
     ),
   )
 })

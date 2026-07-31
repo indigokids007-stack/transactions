@@ -55,6 +55,13 @@ export const strings = {
     period: 'Davr',
     thisMonth: 'Shu oy',
     lastMonth: "O'tgan oy",
+    // The third option in the same picker (Task 8's approved design: "this month, last
+    // month, custom range"), plus the two date inputs and the message shown while the
+    // chosen end date comes before its start.
+    customRange: 'Boshqa davr',
+    rangeFrom: 'Boshlanishi',
+    rangeTo: 'Tugashi',
+    rangeInvalid: "Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas.",
     groupBy: 'Guruhlash',
     category: 'Turkum',
     interval: 'Oraliq',
@@ -65,6 +72,10 @@ export const strings = {
     // stating plainly, not a blank rectangle the user has to interpret themselves.
     empty: "Bu davr uchun ma'lumot yo'q.",
     loadFailed: "Hisobotni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
+    // Shown instead of `loadFailed` when the request itself reports a 429: the authenticated
+    // API and the export both carry rate limits, so this is a state a person actually hits,
+    // not a hypothetical one worth folding into the generic message.
+    rateLimited: "So'rovlar juda ko'p. Birozdan keyin qaytadan urinib ko'ring.",
     // The report-view switch inside the Reports tab (Task 8): buttons inside the
     // Reports panel, not a second row of app-level tabs. `byStaff` only renders for a
     // user who may see others' spend — see `ReportsScreen`'s permission gate.

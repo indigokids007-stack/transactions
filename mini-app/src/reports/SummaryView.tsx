@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ApiClient } from '../api/client'
 import type { ApiDimension, SummaryReport } from '../api/types'
 import { strings } from '../strings'
@@ -6,6 +6,7 @@ import { EmptyState } from '../ui/EmptyState'
 import { ErrorState } from '../ui/ErrorState'
 import { CurrencySection, type GroupRow } from './CurrencySection'
 import type { PeriodRange } from './usePeriod'
+import { useReportFetch } from './useReportFetch'
 
 export type SummaryViewProps = {
   client: ApiClient
@@ -47,26 +48,11 @@ function groupByValue(dimensionKey: string): string {
 // render time.
 export function SummaryView({ client, period, dimensions = [], chartWidth, chartHeight }: SummaryViewProps) {
   const [groupBy, setGroupBy] = useState('category')
-  const [report, setReport] = useState<SummaryReport | null>(null)
-  const [failed, setFailed] = useState(false)
 
-  useEffect(() => {
-    let ignore = false
-    setFailed(false)
-
-    client
-      .summary({ from: period.from, to: period.to, group_by: groupBy })
-      .then((result) => {
-        if (!ignore) setReport(result)
-      })
-      .catch(() => {
-        if (!ignore) setFailed(true)
-      })
-
-    return () => {
-      ignore = true
-    }
-  }, [client, period.from, period.to, groupBy])
+  const { data: report, failed, rateLimited, retry } = useReportFetch<SummaryReport>(
+    () => client.summary({ from: period.from, to: period.to, group_by: groupBy }),
+    [client, period.from, period.to, groupBy],
+  )
 
   const buckets = useMemo(() => (report ? bucketsByCurrency(report) : []), [report])
 
@@ -89,7 +75,13 @@ export function SummaryView({ client, period, dimensions = [], chartWidth, chart
   )
 
   if (failed) {
-    return <ErrorState message={strings.reports.loadFailed} />
+    return (
+      <ErrorState
+        message={rateLimited ? strings.reports.rateLimited : strings.reports.loadFailed}
+        actionLabel={strings.common.retry}
+        onAction={retry}
+      />
+    )
   }
 
   if (report && buckets.length === 0) {

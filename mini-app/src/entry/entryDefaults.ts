@@ -13,8 +13,17 @@ export type EntryValues = {
   occurredOn: string
 }
 
+function pad(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
+// The device's own calendar date, not UTC's: a transaction entered near local midnight
+// (Uzbekistan is UTC+5) must date itself the day the person entering it experienced, not
+// whatever day UTC happens to still be on at that instant. `toISOString()` reads the UTC
+// calendar and would silently misdate exactly that case.
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10)
+  const now = new Date()
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
 export function valuesFromDefaults(bootstrap: Bootstrap): EntryValues {

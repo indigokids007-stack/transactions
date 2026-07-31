@@ -144,3 +144,32 @@ it('labels a bar above Number.MAX_SAFE_INTEGER exactly, from the string amount',
   expect(await within(uzs).findByText('10 000 000 000 000 001')).toBeInTheDocument()
   expect(within(uzs).queryByText(/10 000 000 000 000 000\b/)).not.toBeInTheDocument()
 })
+
+// The review's finding: a failed request used to render a dead end with no action.
+it('offers a retry action when the request fails, and retrying refetches', async () => {
+  const client = clientReturning(trend)
+  client.trend = vi
+    .fn()
+    .mockRejectedValueOnce({ status: 500, message: 'Server exploded.' })
+    .mockResolvedValueOnce(trend)
+
+  render(<TrendView client={client} period={period} />)
+
+  expect(await screen.findByText(strings.reports.loadFailed)).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: strings.common.retry }))
+
+  await screen.findByTestId('trend-UZS')
+  expect(client.trend).toHaveBeenCalledTimes(2)
+})
+
+// The other half of the same finding: a 429 must read as "too many requests, try again
+// in a moment", not the generic failure message.
+it('shows a specific message for a 429, not the generic failure', async () => {
+  const client = clientReturning(trend)
+  client.trend = vi.fn().mockRejectedValue({ status: 429, message: 'Too Many Requests' })
+
+  render(<TrendView client={client} period={period} />)
+
+  expect(await screen.findByText(strings.reports.rateLimited)).toBeInTheDocument()
+  expect(screen.queryByText(strings.reports.loadFailed)).not.toBeInTheDocument()
+})

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { ApiClient } from '../api/client'
 import type { SummaryReport } from '../api/types'
 import { strings } from '../strings'
@@ -7,6 +7,7 @@ import { ErrorState } from '../ui/ErrorState'
 import type { GroupRow } from './CurrencySection'
 import { StaffSection } from './StaffSection'
 import type { PeriodRange } from './usePeriod'
+import { useReportFetch } from './useReportFetch'
 
 export type StaffViewProps = {
   client: ApiClient
@@ -44,31 +45,21 @@ function rankByCurrency(report: SummaryReport): CurrencyRanking[] {
 // The permission check for whether this view should even be reachable lives in
 // `ReportsScreen`, not here — see that file's doc comment for why.
 export function StaffView({ client, period }: StaffViewProps) {
-  const [report, setReport] = useState<SummaryReport | null>(null)
-  const [failed, setFailed] = useState(false)
-
-  useEffect(() => {
-    let ignore = false
-    setFailed(false)
-
-    client
-      .summary({ from: period.from, to: period.to, group_by: 'user' })
-      .then((result) => {
-        if (!ignore) setReport(result)
-      })
-      .catch(() => {
-        if (!ignore) setFailed(true)
-      })
-
-    return () => {
-      ignore = true
-    }
-  }, [client, period.from, period.to])
+  const { data: report, failed, rateLimited, retry } = useReportFetch<SummaryReport>(
+    () => client.summary({ from: period.from, to: period.to, group_by: 'user' }),
+    [client, period.from, period.to],
+  )
 
   const rankings = useMemo(() => (report ? rankByCurrency(report) : []), [report])
 
   if (failed) {
-    return <ErrorState message={strings.reports.loadFailed} />
+    return (
+      <ErrorState
+        message={rateLimited ? strings.reports.rateLimited : strings.reports.loadFailed}
+        actionLabel={strings.common.retry}
+        onAction={retry}
+      />
+    )
   }
 
   if (report && rankings.length === 0) {

@@ -10,6 +10,11 @@ const THEME_MAPPINGS: { cssVar: string; paramKey: string; fallback: string }[] =
   { cssVar: '--tg-hint', paramKey: 'hint_color', fallback: '#707579' },
   { cssVar: '--tg-button', paramKey: 'button_color', fallback: '#2481cc' },
   { cssVar: '--tg-button-text', paramKey: 'button_text_color', fallback: '#ffffff' },
+  // Unselected keypad/chip/cancel backgrounds (`PeriodPicker`, `CategoryChips`,
+  // `DetailsSheet`'s type switch, `AmountKeypad`'s cancel) style themselves against this
+  // variable. Left undefined, the browser fell back to `initial` — a mismatch that was
+  // most visible in dark theme, where "unselected" and "invisible" started to look alike.
+  { cssVar: '--tg-secondary-bg', paramKey: 'secondary_bg_color', fallback: '#f0f0f0' },
 ]
 
 // Synchronises the document with Telegram's WebApp runtime: applies its theme colours as

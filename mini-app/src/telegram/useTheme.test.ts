@@ -18,6 +18,7 @@ it('applies a readable light palette outside Telegram', () => {
   expect(readVar('--tg-hint')).toBe('#707579')
   expect(readVar('--tg-button')).toBe('#2481cc')
   expect(readVar('--tg-button-text')).toBe('#ffffff')
+  expect(readVar('--tg-secondary-bg')).toBe('#f0f0f0')
 })
 
 it('applies the Telegram theme params when present, and calls ready/expand', () => {
@@ -27,7 +28,7 @@ it('applies the Telegram theme params when present, and calls ready/expand', () 
     WebApp: {
       initData: '',
       colorScheme: 'dark',
-      themeParams: { bg_color: '#000000', button_color: '#3390ec' },
+      themeParams: { bg_color: '#000000', button_color: '#3390ec', secondary_bg_color: '#181818' },
       MainButton: {
         text: '',
         isVisible: false,
@@ -52,6 +53,7 @@ it('applies the Telegram theme params when present, and calls ready/expand', () 
 
   expect(readVar('--tg-bg')).toBe('#000000')
   expect(readVar('--tg-button')).toBe('#3390ec')
+  expect(readVar('--tg-secondary-bg')).toBe('#181818')
   // A param Telegram did not send still falls back to the default.
   expect(readVar('--tg-hint')).toBe('#707579')
   expect(ready).toHaveBeenCalledOnce()
