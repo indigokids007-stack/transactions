@@ -32,12 +32,19 @@ export function EntryScreen({ bootstrap, client, active = true }: EntryScreenPro
 
   // MainButton is Telegram's own chrome, not something this tree renders, so binding and
   // unbinding its click handler is a genuine effect: it synchronises with an external
-  // system rather than deriving anything from render. Skipped entirely while another tab
-  // is showing, so the handler is never bound behind the user's back.
+  // system rather than deriving anything from render. While another tab is showing, the
+  // handler is never bound AND the button is hidden — gating the handler alone stops a
+  // save from an invisible screen, but leaves a live-looking "Saqlash" on screen with a
+  // tap that silently does nothing, which is its own confusing failure. `show()`/`setText`
+  // re-run and restore it the moment `active` goes back to `true`.
   useEffect(() => {
-    if (!active) return
-
     const button = webApp().MainButton
+
+    if (!active) {
+      button.hide()
+      return
+    }
+
     button.setText(strings.entry.save)
     button.show()
 
@@ -52,9 +59,13 @@ export function EntryScreen({ bootstrap, client, active = true }: EntryScreenPro
   }, [form.save, active])
 
   useEffect(() => {
-    if (!active) return
-
     const button = webApp().MainButton
+
+    if (!active) {
+      button.disable()
+      return
+    }
+
     if (form.canSave) {
       button.enable()
     } else {

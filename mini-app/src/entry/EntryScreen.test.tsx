@@ -4,10 +4,14 @@ import { EntryScreen } from './EntryScreen'
 import { strings } from '../strings'
 import { bootstrapFixture, clientStub } from '../test/fixtures'
 
-async function enterValidTransaction() {
+async function fillValidAmountAndDimension() {
   await userEvent.click(screen.getByRole('button', { name: '1' }))
   await userEvent.click(screen.getByRole('button', { name: strings.entry.details }))
   await userEvent.selectOptions(screen.getByLabelText('Filial'), '9')
+}
+
+async function enterValidTransaction() {
+  await fillValidAmountAndDimension()
   await userEvent.click(screen.getByRole('button', { name: strings.entry.save }))
 }
 
@@ -44,6 +48,9 @@ it('reloads the reference data when the api rejects a stale category', async () 
 
   expect(await screen.findByText(strings.entry.referenceChanged)).toBeInTheDocument()
   expect(client.bootstrap).toHaveBeenCalled()
+  // The notice above is the whole message; the raw backend string must not also render,
+  // or the screen shows the same failure twice — once translated, once not.
+  expect(screen.queryByText('The selected category_id is invalid.')).not.toBeInTheDocument()
 })
 
 it('shows a 422 field error inline instead of doing nothing', async () => {
@@ -75,25 +82,24 @@ describe('MainButton gating while another tab is showing', () => {
   })
 
   function stubMainButton() {
-    const onClick = vi.fn()
-    const offClick = vi.fn()
+    const mainButton = {
+      text: '',
+      isVisible: false,
+      isActive: true,
+      setText: vi.fn(),
+      show: vi.fn(),
+      hide: vi.fn(),
+      enable: vi.fn(),
+      disable: vi.fn(),
+      onClick: vi.fn(),
+      offClick: vi.fn(),
+    }
     window.Telegram = {
       WebApp: {
         initData: '',
         colorScheme: 'light',
         themeParams: {},
-        MainButton: {
-          text: '',
-          isVisible: false,
-          isActive: true,
-          setText: vi.fn(),
-          show: vi.fn(),
-          hide: vi.fn(),
-          enable: vi.fn(),
-          disable: vi.fn(),
-          onClick,
-          offClick,
-        },
+        MainButton: mainButton,
         ready: vi.fn(),
         expand: vi.fn(),
         close: vi.fn(),
@@ -101,28 +107,64 @@ describe('MainButton gating while another tab is showing', () => {
         offEvent: vi.fn(),
       },
     }
-    return { onClick, offClick }
+    return mainButton
   }
 
   it('never binds the click handler while the screen is inactive', () => {
-    const { onClick } = stubMainButton()
+    const mainButton = stubMainButton()
 
     render(<EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={false} />)
 
-    expect(onClick).not.toHaveBeenCalled()
+    expect(mainButton.onClick).not.toHaveBeenCalled()
   })
 
   it('unbinds the handler the moment the screen becomes inactive', () => {
-    const { onClick, offClick } = stubMainButton()
+    const mainButton = stubMainButton()
 
     const { rerender } = render(
       <EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={true} />,
     )
-    expect(onClick).toHaveBeenCalledTimes(1)
-    const boundHandler = onClick.mock.calls[0][0]
+    expect(mainButton.onClick).toHaveBeenCalledTimes(1)
+    const boundHandler = mainButton.onClick.mock.calls[0][0]
 
     rerender(<EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={false} />)
 
-    expect(offClick).toHaveBeenCalledWith(boundHandler)
+    expect(mainButton.offClick).toHaveBeenCalledWith(boundHandler)
+  })
+
+  it('hides the button while inactive and shows it again when the tab returns', () => {
+    const mainButton = stubMainButton()
+
+    const { rerender } = render(
+      <EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={true} />,
+    )
+    expect(mainButton.show).toHaveBeenCalled()
+    expect(mainButton.hide).not.toHaveBeenCalled()
+
+    rerender(<EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={false} />)
+    expect(mainButton.hide).toHaveBeenCalled()
+
+    const showCallsBeforeReturn = mainButton.show.mock.calls.length
+    rerender(<EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={true} />)
+    expect(mainButton.show.mock.calls.length).toBeGreaterThan(showCallsBeforeReturn)
+  })
+
+  it('disables the button while inactive even though the form is otherwise ready to save', async () => {
+    const mainButton = stubMainButton()
+
+    const { rerender } = render(
+      <EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={true} />,
+    )
+    await fillValidAmountAndDimension()
+    expect(mainButton.enable).toHaveBeenCalled()
+
+    // `disable` was already called once during the initial empty-amount render, before
+    // canSave became true — clear that history so the assertion below can only pass
+    // because of the inactive transition, not an earlier, unrelated call.
+    mainButton.disable.mockClear()
+
+    rerender(<EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={false} />)
+
+    expect(mainButton.disable).toHaveBeenCalled()
   })
 })

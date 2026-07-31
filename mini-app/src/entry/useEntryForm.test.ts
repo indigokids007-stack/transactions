@@ -146,4 +146,30 @@ it('refetches bootstrap and clears the pick when a 422 names a stale reference',
 
   expect(client.bootstrap).toHaveBeenCalled()
   expect(result.current.notice).toBeTruthy()
+  // The notice is the whole message for a stale reference: the raw backend string must
+  // not also linger in `fieldErrors`, or the UI shows the same failure twice, once in
+  // plain Uzbek and once as an untranslated validation sentence underneath it.
+  expect(result.current.fieldErrors).toEqual({})
+})
+
+it('keeps an unrelated field error alongside a stale-reference notice', async () => {
+  const client = clientStub()
+  client.createTransaction = vi.fn().mockRejectedValue({
+    status: 422,
+    errors: {
+      category_id: ['The selected category_id is invalid.'],
+      note: ['Note is too long.'],
+    },
+  })
+  const { result } = renderHook(() => useEntryForm(bootstrapFixture, client))
+
+  act(() => result.current.setAmount('120000'))
+  act(() => result.current.setDimension(3, 9))
+  await act(async () => {
+    await result.current.save()
+  })
+
+  // `category_id`'s message is covered by the notice and dropped; `note`'s is not
+  // stale-reference related and still needs to reach the user.
+  expect(result.current.fieldErrors).toEqual({ note: ['Note is too long.'] })
 })

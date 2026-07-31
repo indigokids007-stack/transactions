@@ -41,6 +41,16 @@ export function isStaleReference(errors: FieldErrors): boolean {
   return staleCategory(errors) || staleDimensions(errors)
 }
 
+// Drops the stale-reference keys from a field-error map so a caller that has already
+// shown the friendlier `referenceChanged` notice doesn't also render the raw backend
+// string for the same failure underneath it. Any other field the same 422 named (an
+// unrelated `note` or `amount` error arriving alongside a stale category, say) survives.
+export function withoutStaleReferenceFields(errors: FieldErrors): FieldErrors {
+  return Object.fromEntries(
+    Object.entries(errors).filter(([field]) => field !== 'category_id' && field !== 'dimension_values'),
+  )
+}
+
 export type StaleReferenceResolution = {
   reference: Bootstrap
   categoryId: number | null

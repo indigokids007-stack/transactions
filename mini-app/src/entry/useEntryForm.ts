@@ -1,7 +1,13 @@
 import { useRef, useState } from 'react'
 import { parseAmount } from './parseAmount'
 import { valuesFromDefaults, type EntryValues } from './entryDefaults'
-import { isStaleReference, readErrors, readStatus, resolveStaleReference } from './entryErrors'
+import {
+  isStaleReference,
+  readErrors,
+  readStatus,
+  resolveStaleReference,
+  withoutStaleReferenceFields,
+} from './entryErrors'
 import type { ApiClient } from '../api/client'
 import type { ApiTransaction, Bootstrap, TransactionWrite } from '../api/types'
 import { strings } from '../strings'
@@ -78,14 +84,21 @@ export function useEntryForm(bootstrap: Bootstrap, client: ApiClient): EntryForm
       return
     }
 
-    setFieldErrors(errors)
-
-    if (isStaleReference(errors)) {
-      const resolution = await resolveStaleReference(errors, client, values)
-      setReference(resolution.reference)
-      setNotice(strings.entry.referenceChanged)
-      patch({ categoryId: resolution.categoryId, dimensionValues: resolution.dimensionValues })
+    if (!isStaleReference(errors)) {
+      setFieldErrors(errors)
+      return
     }
+
+    // The notice below is the whole message for a stale category/dimension: showing the
+    // raw backend string as well ("The selected category_id is invalid.") underneath a
+    // friendly "pick again" notice would just repeat the same failure in two registers.
+    // Any *other* field the same 422 named still renders normally.
+    setFieldErrors(withoutStaleReferenceFields(errors))
+
+    const resolution = await resolveStaleReference(errors, client, values)
+    setReference(resolution.reference)
+    setNotice(strings.entry.referenceChanged)
+    patch({ categoryId: resolution.categoryId, dimensionValues: resolution.dimensionValues })
   }
 
   async function save(): Promise<void> {
