@@ -109,26 +109,55 @@ it.each(discriminating)('refuses because %s: %j', (_rule, input) => {
   expect(parseAmount(input)).toBeNull()
 })
 
-// PHP compiles `/u` with PCRE2_UCP, so its `[\s\p{Z}]` covers U+0085 and U+180E on top of
-// `\p{White_Space}`. Every one must flatten to a space here exactly as it does there:
-// grouping nothing on its own, and separating a magnitude the way an ASCII space does.
-const flattened = [
-  '\u0085',
-  '\u180E',
-  '\u00A0',
-  '\u1680',
-  '\u2007',
-  '\u2009',
-  '\u2028',
-  '\u202F',
-  '\u205F',
-  '\u3000',
+// The 25 code points Unicode gives the White_Space property, written out rather than read
+// back from `\p{White_Space}`, so the assertion below is a fixed contract and not two
+// implementations agreeing with each other. Derived by sweeping every code point through
+// `preg_match('/\p{White_Space}/u', ...)` in the container, not transcribed from docs.
+const WHITE_SPACE = [
+  0x0009, 0x000a, 0x000b, 0x000c, 0x000d, 0x0020, 0x0085, 0x00a0, 0x1680,
+  0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a,
+  0x2028, 0x2029, 0x202f, 0x205f, 0x3000,
 ]
 
-it.each(flattened)('flattens %j to a space that groups nothing', (space) => {
+// Unicode 6.3 moved U+180E out of White_Space, but PCRE still reaches it through `\h`, so
+// PHP's `[\s\p{Z}]` flattens it and so must this parser. It is the only addition: the same
+// sweep returns 26 for `[\s\p{Z}]` and these 25 for the property, differing here alone.
+const FLATTENED = [...WHITE_SPACE, 0x180e].sort((a, b) => a - b)
+
+const named = FLATTENED.map((cp): [string, string] => [
+  cp.toString(16).toUpperCase().padStart(4, '0'),
+  String.fromCodePoint(cp),
+])
+
+it.each(named)('flattens U+%s to a space that groups nothing', (_name, space) => {
   expect(parseAmount(`100${space}000`)).toBeNull()
   expect(parseAmount(`100000${space}k`)).toEqual({ amount: '100000000' })
   expect(parseAmount(`${space}7${space}ming${space}`)).toEqual({ amount: '7000' })
+})
+
+// Whoever next edits the WHITESPACE comment in parseAmount.ts: this is the test that pins
+// it. Prose about Unicode set membership is invisible to every other test in this file, and
+// that comment has already been wrong twice while the code it describes was right. Re-run
+// the two-engine sweep before changing either, and expect this test to fail if the class
+// gains a code point or loses one.
+//
+// A flattened character makes `7<c>ming` read 7000 the way `7 ming` does, and leaves
+// `100<c>000` refusing the way `100 000` does. Both halves are needed: `7.ming` is 7000 too,
+// because the token swallows a separator, so the first probe alone reports `.` and `,` as
+// whitespace.
+it('flattens exactly the 26 code points PHP flattens, and no others', () => {
+  const flattens = (cp: number): boolean => {
+    const c = String.fromCodePoint(cp)
+    return parseAmount(`7${c}ming`)?.amount === '7000' && parseAmount(`100${c}000`) === null
+  }
+
+  const actual: number[] = []
+  for (let cp = 0; cp <= 0x10ffff; cp++) {
+    if (cp >= 0xd800 && cp <= 0xdfff) continue
+    if (flattens(cp)) actual.push(cp)
+  }
+
+  expect(actual).toEqual(FLATTENED)
 })
 
 // A note in the amount field is not an amount: this field has no note half to split off.

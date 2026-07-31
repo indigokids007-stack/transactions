@@ -43,6 +43,9 @@ const BOUND = /^[0-9]{1,15}$/
  * earlier versions of this comment were plausible, cited real constructs, and were false.
  * It reports this class and PHP's agreeing exactly, with no exclusive on either side.
  *
+ * The class is pinned by the test named "flattens exactly the 26 code points PHP flattens,
+ * and no others", which re-runs that sweep. Do not edit this comment or the class without it.
+ *
  * Bank apps and spreadsheets paste U+00A0, U+202F, U+2009 and U+2007 as thousands
  * separators, and those must refuse exactly the way `100 000` refuses.
  */
