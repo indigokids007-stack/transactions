@@ -25,14 +25,16 @@ services:
     container_name: transactions-scheduler
     restart: unless-stopped
     command: ["php", "artisan", "schedule:work"]
+    environment:
+      # The app container owns the first `composer install` and the migrations; this one
+      # waits for them rather than racing through the same entrypoint. It deliberately
+      # does not `depends_on` the app's health: on a clean clone the app is still
+      # installing dependencies for minutes, and compose would call that a failed start.
+      APP_BOOTSTRAP: "0"
     volumes:
       - .:/app
     depends_on:
       db:
-        condition: service_healthy
-      # Waiting for the app lets it own the first `composer install` and migration
-      # instead of the two containers racing each other through the same entrypoint.
-      app:
         condition: service_healthy
 
   db:
