@@ -53,6 +53,25 @@ class TelegramClient
         ], fn (mixed $value) => $value !== null));
     }
 
+    /**
+     * Point Telegram at this application's webhook URL. Unlike the other calls here, the
+     * caller (the registration command) needs the raw response to decide whether to fail.
+     *
+     * @return array<string, mixed>
+     */
+    public function setWebhook(string $url, string $secretToken): array
+    {
+        $response = $this->call('setWebhook', [
+            'url' => $url,
+            'secret_token' => $secretToken,
+        ]);
+
+        /** @var array<string, mixed> $payload */
+        $payload = is_array($response->json()) ? $response->json() : [];
+
+        return $payload;
+    }
+
     /** @param array<string, mixed> $payload */
     private function call(string $method, array $payload): Response
     {
