@@ -44,4 +44,15 @@ export const strings = {
     // `notice` rather than leaving the tap looking like it did nothing at all.
     saveFailed: "Saqlashda xatolik yuz berdi. Qaytadan urinib ko'ring.",
   },
+  reports: {
+    period: 'Davr',
+    thisMonth: 'Shu oy',
+    lastMonth: "O'tgan oy",
+    groupBy: 'Guruhlash',
+    category: 'Turkum',
+    // Shown instead of a chart with nothing in it: an empty period is a fact worth
+    // stating plainly, not a blank rectangle the user has to interpret themselves.
+    empty: "Bu davr uchun ma'lumot yo'q.",
+    loadFailed: "Hisobotni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
+  },
 } as const

@@ -2,6 +2,9 @@ import { useState } from 'react'
 import type { SessionState } from './auth/useSession'
 import type { ApiClient } from './api/client'
 import { EntryScreen } from './entry/EntryScreen'
+import { PeriodPicker } from './reports/PeriodPicker'
+import { SummaryView } from './reports/SummaryView'
+import { usePeriod } from './reports/usePeriod'
 import { strings } from './strings'
 import { useTheme } from './telegram/useTheme'
 import { EmptyState } from './ui/EmptyState'
@@ -29,6 +32,11 @@ const TAB_ITEMS: TabItem[] = [
 export function App({ session, onRetry, client }: AppProps) {
   useTheme()
   const [tab, setTab] = useState<TabId>('add')
+  // Called unconditionally, like every hook, even on the states below that return before
+  // reaching the tab bar — the Reports panel this feeds stays mounted across a tab
+  // switch (see the `hidden` panels below), so its period must survive right along with
+  // it rather than reset every time the user looks away and back.
+  const period = usePeriod()
 
   if (session.kind === 'loading') {
     return <EmptyState message={strings.session.loading} />
@@ -69,6 +77,16 @@ export function App({ session, onRetry, client }: AppProps) {
           >
             {item.id === 'add' && client ? (
               <EntryScreen bootstrap={session.bootstrap} client={client} active={tab === 'add'} />
+            ) : item.id === 'reports' && client ? (
+              <>
+                <PeriodPicker period={period} />
+                <SummaryView
+                  client={client}
+                  period={period}
+                  exponents={session.bootstrap.currencies}
+                  dimensions={session.bootstrap.dimensions}
+                />
+              </>
             ) : (
               <PanelPlaceholder label={item.label} />
             )}
