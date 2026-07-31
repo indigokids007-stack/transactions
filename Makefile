@@ -3,7 +3,7 @@ PHP = $(DC) exec -T app php
 PHP_TEST = $(DC) exec -T -e DB_DATABASE=transactions_test app php
 COMPOSER = $(DC) exec -T app composer
 
-.PHONY: up down shell artisan composer migrate fresh test test-db smoke wait-app analyze pint
+.PHONY: up down shell artisan composer migrate fresh test test-db smoke wait-app analyze pint app-dev app-test app-build app-lint
 
 up:
 	$(DC) up -d --build
@@ -58,3 +58,17 @@ analyze:
 
 pint:
 	$(PHP) vendor/bin/pint --dirty
+
+# The mini app runs on the host with Node 22, not in Docker, so these targets
+# shell out to npm directly instead of going through $(DC).
+app-dev:
+	cd mini-app && npm run dev
+
+app-test:
+	cd mini-app && npm test
+
+app-build:
+	cd mini-app && npm run build
+
+app-lint:
+	cd mini-app && npm run lint
