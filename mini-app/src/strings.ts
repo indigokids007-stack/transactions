@@ -21,4 +21,22 @@ export const strings = {
   common: {
     retry: 'Qaytadan urinish',
   },
+  entry: {
+    amount: 'Summa',
+    category: 'Turkum',
+    details: 'Batafsil',
+    type: 'Turi',
+    expense: 'Xarajat',
+    income: 'Daromad',
+    currency: 'Valyuta',
+    date: 'Sana',
+    note: 'Izoh',
+    backspace: "O'chirish",
+    save: 'Saqlash',
+    saved: 'Saqlandi.',
+    undo: 'Bekor qilish',
+    // Shown when a 422 names `category_id` or `dimension_values`: the reference row was
+    // deactivated since bootstrap loaded, so retrying the same pick cannot succeed.
+    referenceChanged: "Ma'lumotlar yangilandi. Iltimos, qayta tanlang.",
+  },
 } as const

@@ -19,5 +19,5 @@ const client = createClient(readBaseUrl())
 // testable with a plain `session` prop and no network or hook mocking.
 export function AppRoot() {
   const { state, retry } = useSession(client, webApp().initData)
-  return <App session={state} onRetry={retry} />
+  return <App session={state} onRetry={retry} client={client} />
 }

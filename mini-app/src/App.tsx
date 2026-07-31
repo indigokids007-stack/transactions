@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { SessionState } from './auth/useSession'
+import type { ApiClient } from './api/client'
+import { EntryScreen } from './entry/EntryScreen'
 import { strings } from './strings'
 import { useTheme } from './telegram/useTheme'
 import { EmptyState } from './ui/EmptyState'
@@ -10,6 +12,8 @@ export type AppProps = {
   session: SessionState
   /** Wired to `useSession`'s `retry` in `AppRoot`; omitted (and so hidden) in tests that don't need it. */
   onRetry?: () => void
+  /** Wired to the real `ApiClient` in `AppRoot`; the Add panel needs it once the session is active. */
+  client?: ApiClient
 }
 
 const TAB_ITEMS: TabItem[] = [
@@ -22,7 +26,7 @@ const TAB_ITEMS: TabItem[] = [
 // bar — every other state is a full-screen message with nothing else on it. Takes
 // `session` as a prop (rather than calling `useSession` itself) so it is testable
 // without mocking the hook or the network; `AppRoot` wires the real session.
-export function App({ session, onRetry }: AppProps) {
+export function App({ session, onRetry, client }: AppProps) {
   useTheme()
   const [tab, setTab] = useState<TabId>('add')
 
@@ -63,7 +67,11 @@ export function App({ session, onRetry }: AppProps) {
             // target for every tab, not just the active one.
             hidden={item.id !== tab}
           >
-            <PanelPlaceholder label={item.label} />
+            {item.id === 'add' && client ? (
+              <EntryScreen bootstrap={session.bootstrap} client={client} />
+            ) : (
+              <PanelPlaceholder label={item.label} />
+            )}
           </div>
         ))}
       </main>
