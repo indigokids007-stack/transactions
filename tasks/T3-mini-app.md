@@ -2,9 +2,9 @@
 status: in-review
 intent_source: "Brainstormed 2026-07-31: Telegram mini app against the finished backend API. Human chose entry plus all four reports, Recharts, bottom tab bar."
 created: 2026-07-31
-role_history: [planner: claude-opus-5, builder: claude-code-subagents, reviewer: pending]
+role_history: [planner: claude-opus-5, builder: claude-code-subagents, reviewer: gpt-5.6-sol]
 lane: full
-review_rounds_used: 0
+review_rounds_used: 1
 ---
 
 ## Task: Cara transactions Telegram mini app
