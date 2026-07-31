@@ -47,6 +47,18 @@ it('ships an env template whose credentials match the compose database', functio
         ->and($compose)->toContain('POSTGRES_PASSWORD: '.($template['DB_PASSWORD'] ?? ''));
 });
 
+/**
+ * The split brain that hid C1 for the whole build: the compose file said Postgres, `.env`
+ * said SQLite, the CLI read one and the serving process read the other, and whichever you
+ * looked at agreed with you. Only a convention keeps those keys out of the compose file
+ * now, so this is the thing that makes the convention hold.
+ */
+it('keeps database settings out of the compose file entirely', function () {
+    $compose = (string) file_get_contents(base_path('docker-compose.yml'));
+
+    expect($compose)->not->toMatch('/^\s*-?\s*DB_[A-Z_]+\s*[:=]/m');
+});
+
 it('ships an env template that does not leak stack traces by default', function () {
     $template = envTemplate();
 

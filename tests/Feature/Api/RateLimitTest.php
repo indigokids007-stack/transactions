@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Sanctum;
 
@@ -42,4 +44,20 @@ it('throttles every authenticated api route as a group', function () {
 it('throttles the telegram webhook', function () {
     expect(Route::getRoutes()->getByName('telegram.webhook')?->gatherMiddleware())
         ->toContain('throttle:telegram-webhook');
+});
+
+/**
+ * The middleware assertions above prove a route is throttled, not what it is throttled to,
+ * so the numbers themselves were pinned by nothing. This resolves each named limiter the
+ * way `ThrottleRequests` does and reads the ceiling it hands back.
+ */
+it('pins the ceiling each named limiter allows', function () {
+    $request = Request::create('/api/transactions');
+    $request->setUserResolver(fn () => User::factory()->create());
+
+    $ceiling = fn (string $name): int => RateLimiter::limiter($name)($request)->maxAttempts;
+
+    expect($ceiling('api'))->toBe(120)
+        ->and($ceiling('exports'))->toBe(10)
+        ->and($ceiling('telegram-webhook'))->toBe(300);
 });

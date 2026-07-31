@@ -18,6 +18,24 @@ cd /app
 
 WAIT_FOR_BOOTSTRAP_SECONDS=600
 
+# `migrate --force` creates a SQLite database rather than asking, so a `.env` that
+# names the wrong connection produced a fully migrated stray file, three green smoke
+# checks and a healthy container while the Postgres volume sat empty. The container
+# refuses to start instead, before any of that can be created, because a deployment
+# that is wrong should say so rather than look right.
+assert_postgres_connection() {
+    connection=$(php artisan tinker --execute='echo config("database.default");' 2>/dev/null | tr -d '[:space:]')
+
+    if [ "$connection" = "pgsql" ]; then
+        return
+    fi
+
+    echo "entrypoint: refusing to start on database connection '${connection:-unknown}'." >&2
+    echo "entrypoint: this application runs on PostgreSQL. Set DB_CONNECTION=pgsql in .env." >&2
+
+    exit 1
+}
+
 if [ "${APP_BOOTSTRAP:-1}" = "1" ]; then
     if [ ! -f .env ]; then
         echo "entrypoint: creating .env from .env.example"
@@ -33,9 +51,6 @@ if [ "${APP_BOOTSTRAP:-1}" = "1" ]; then
         echo "entrypoint: generating the application key"
         php artisan key:generate --force
     fi
-
-    echo "entrypoint: running migrations"
-    php artisan migrate --force
 else
     echo "entrypoint: waiting for the bootstrapping container to install dependencies"
 
@@ -50,6 +65,13 @@ else
         waited=$((waited + 2))
         sleep 2
     done
+fi
+
+assert_postgres_connection
+
+if [ "${APP_BOOTSTRAP:-1}" = "1" ]; then
+    echo "entrypoint: running migrations"
+    php artisan migrate --force
 fi
 
 exec docker-php-entrypoint "$@"
