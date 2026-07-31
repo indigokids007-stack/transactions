@@ -50,6 +50,10 @@ export const strings = {
     lastMonth: "O'tgan oy",
     groupBy: 'Guruhlash',
     category: 'Turkum',
+    interval: 'Oraliq',
+    day: 'Kun',
+    week: 'Hafta',
+    month: 'Oy',
     // Shown instead of a chart with nothing in it: an empty period is a fact worth
     // stating plainly, not a blank rectangle the user has to interpret themselves.
     empty: "Bu davr uchun ma'lumot yo'q.",
