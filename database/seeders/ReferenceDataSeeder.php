@@ -16,9 +16,11 @@ use Illuminate\Support\Facades\Hash;
 /**
  * Placeholder reference data for a fresh install: department, category and dimension
  * names the human has not supplied Cara's real values for yet, seeded so the panel and
- * the bot have something to work against until they are replaced. Every row is keyed on
- * something stable (name, parent, dimension key) so running this twice never duplicates
- * it, and the seeded admin is the one exception to "placeholder": it is a real login.
+ * the bot have something to work against until they are replaced. Running this twice
+ * never duplicates a row: dimensions key on their unique `key` column, departments and
+ * categories key on name (and, for categories, parent), so renaming one in the panel and
+ * then re-seeding recreates it under the old name rather than updating it in place. The
+ * seeded admin is the one exception to "placeholder": it is a real login, created once.
  */
 class ReferenceDataSeeder extends Seeder
 {
@@ -101,6 +103,14 @@ class ReferenceDataSeeder extends Seeder
             return;
         }
 
+        if (! is_numeric($telegramId)) {
+            $this->command->warn(
+                "ADMIN_TELEGRAM_ID ({$telegramId}) is not numeric: skipping the admin account, seeded placeholder reference data only."
+            );
+
+            return;
+        }
+
         $email = config('admin.email');
         $password = config('admin.password');
 
@@ -121,9 +131,22 @@ class ReferenceDataSeeder extends Seeder
             ],
         );
 
+        // firstOrCreate returns a pre-existing row untouched, credentials and role
+        // included: reporting that row as freshly "seeded with credentials" here would
+        // tell an operator their login works, or that a staff member became an admin,
+        // when neither happened. This seeder never edits an existing user, so it says so
+        // instead of claiming success on their behalf.
+        if (! $admin->wasRecentlyCreated) {
+            $this->command->warn(
+                "A user with telegram id {$admin->telegram_id} already exists: role and panel credentials left unchanged."
+            );
+
+            return;
+        }
+
         if (! $hasCredentials) {
             $this->command->warn(
-                "Admin (telegram_id {$admin->telegram_id}) seeded without panel credentials: set ADMIN_EMAIL and ADMIN_PASSWORD and re-run to enable panel login."
+                "Admin (telegram_id {$admin->telegram_id}) seeded without panel credentials: this seeder will not add them on a later run since the account now exists, so set the password directly (for example through the panel or php artisan tinker)."
             );
 
             return;

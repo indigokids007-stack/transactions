@@ -29,9 +29,11 @@ The Telegram webhook (`/telegram/webhook`) needs a public HTTPS tunnel in develo
 
 ## Admin panel login
 
-The panel at `/admin` uses Filament's standard email and password login; staff otherwise authenticate through Telegram only and have no password. To get a working admin login, set all three of `ADMIN_TELEGRAM_ID`, `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` before running `php artisan db:seed` (via `make fresh` or `make artisan cmd="db:seed"`). `ReferenceDataSeeder` then creates that user as an active admin with the given email and a bcrypt hash of the given password, and you can sign in at `/admin` with that email and password.
+The panel at `/admin` uses Filament's standard email and password login; staff otherwise authenticate through Telegram only and have no password. To get a working admin login, set all three of `ADMIN_TELEGRAM_ID`, `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` **before the first time** `php artisan db:seed` creates that user, then run `make artisan cmd="db:seed"` (see the warning below before reaching for `make fresh` instead). `ReferenceDataSeeder` then creates that user as an active admin with the given email and a bcrypt hash of the given password, and you can sign in at `/admin` with that email and password.
 
-If `ADMIN_EMAIL` or `ADMIN_PASSWORD` is left blank, the admin account is still seeded (so the Telegram bot works for that user) but without panel credentials, and the seeder says so in its output; set both and re-run `db:seed` to enable panel login later. Telegram-based login for the panel itself is not built yet.
+`ReferenceDataSeeder` never edits a user that already exists, only creates one: if a user with `ADMIN_TELEGRAM_ID` is already in the database (because it seeded without credentials before, or because that person had already signed up through the bot), setting `ADMIN_EMAIL`/`ADMIN_PASSWORD` and running `db:seed` again is a no-op, and the seeder says so ("already exists... left unchanged") rather than claiming it worked. To grant that existing user a login, set their email and password directly, for example through the panel (once another admin exists) or `php artisan tinker`. Telegram-based login for the panel itself is not built yet.
+
+> **Warning:** `make fresh` runs `migrate:fresh --seed`, which drops every table before re-migrating and re-seeding. It is a development-only, data-destroying command; never run it against a database you want to keep.
 
 ## Test database
 

@@ -22,8 +22,15 @@ class SetTelegramWebhookCommand extends Command
 
     public function handle(): int
     {
-        $url = rtrim((string) config('app.url'), '/').'/telegram/webhook';
         $secretToken = (string) config('services.telegram.webhook_secret');
+
+        if ($secretToken === '') {
+            $this->error('TELEGRAM_WEBHOOK_SECRET is blank: refusing to register a webhook Telegram could call unsigned.');
+
+            return self::FAILURE;
+        }
+
+        $url = rtrim((string) config('app.url'), '/').'/telegram/webhook';
 
         $response = $this->telegramClient->setWebhook($url, $secretToken);
 

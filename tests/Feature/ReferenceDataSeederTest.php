@@ -111,6 +111,54 @@ it('does not duplicate the admin when seeded twice', function () {
     expect(User::count())->toBe(1);
 });
 
+it('does not add credentials to an already-seeded admin on re-seed, and says so instead of claiming success', function () {
+    config()->set('admin.telegram_id', '777');
+    config()->set('admin.email', null);
+    config()->set('admin.password', null);
+
+    test()->artisan('db:seed', ['--class' => ReferenceDataSeeder::class]);
+
+    config()->set('admin.email', 'admin@cara.test');
+    config()->set('admin.password', 'correct horse battery staple');
+
+    test()->artisan('db:seed', ['--class' => ReferenceDataSeeder::class])
+        ->expectsOutputToContain('already exists')
+        ->assertSuccessful();
+
+    $admin = User::sole();
+
+    expect($admin->telegram_id)->toBe(777)
+        ->and($admin->email)->toBeNull()
+        ->and($admin->password)->toBeNull();
+});
+
+it('does not elevate a pre-existing staff member to admin on seed, and says so instead of claiming success', function () {
+    $staff = User::factory()->create(['telegram_id' => 777, 'role' => UserRole::Staff, 'email' => null]);
+    config()->set('admin.telegram_id', '777');
+    config()->set('admin.email', 'admin@cara.test');
+    config()->set('admin.password', 'correct horse battery staple');
+
+    test()->artisan('db:seed', ['--class' => ReferenceDataSeeder::class])
+        ->expectsOutputToContain('already exists')
+        ->assertSuccessful();
+
+    $staff->refresh();
+
+    expect($staff->role)->toBe(UserRole::Staff)
+        ->and($staff->email)->toBeNull()
+        ->and($staff->password)->toBeNull();
+});
+
+it('refuses a non-numeric ADMIN_TELEGRAM_ID instead of seeding admin telegram id 0', function () {
+    config()->set('admin.telegram_id', 'not-a-number');
+
+    test()->artisan('db:seed', ['--class' => ReferenceDataSeeder::class])
+        ->expectsOutputToContain('ADMIN_TELEGRAM_ID')
+        ->assertSuccessful();
+
+    expect(User::count())->toBe(0);
+});
+
 it('runs the reference data seeder as part of the default database seed', function () {
     test()->artisan('db:seed')->assertSuccessful();
 

@@ -39,6 +39,8 @@ it('hides that transaction from an unrelated staff member', function () {
     sendUpdate(textUpdate(111, '5000'));
     sendUpdate(callbackUpdate(111, 'd:'.substr(EntryDraft::sole()->id, 0, 8).':ok'));
 
+    expect(Transaction::count())->toBe(1);
+
     Sanctum::actingAs(User::factory()->create());
 
     $this->getJson('/api/transactions')->assertOk()->assertJsonCount(0, 'data');

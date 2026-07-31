@@ -27,3 +27,14 @@ it('fails loudly when telegram refuses the webhook', function () {
         ->expectsOutputToContain('bad webhook')
         ->assertExitCode(1);
 });
+
+it('refuses to register a blank webhook secret instead of registering an unprotected webhook', function () {
+    config()->set('services.telegram.webhook_secret', '');
+    Http::fake();
+
+    test()->artisan('telegram:set-webhook')
+        ->expectsOutputToContain('TELEGRAM_WEBHOOK_SECRET')
+        ->assertExitCode(1);
+
+    Http::assertNothingSent();
+});
