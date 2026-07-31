@@ -8,6 +8,7 @@ use App\Enums\TransactionType;
 use App\Models\EntryDraft;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Support\Concerns\ReadsArrayValues;
 use App\Validation\TransactionFieldValidator;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -22,6 +23,8 @@ use Illuminate\Validation\ValidationException;
  */
 class ConfirmDraft
 {
+    use ReadsArrayValues;
+
     public function __construct(
         private readonly CreateTransaction $createTransaction,
         private readonly TransactionFieldValidator $validator,
@@ -110,13 +113,5 @@ class ConfirmDraft
             ->where('idempotency_key', $draft->id)
             ->with(['category', 'department', 'dimensionValues.dimension'])
             ->first();
-    }
-
-    /** @param array<string, mixed> $data */
-    private function string(array $data, string $key): string
-    {
-        $value = $data[$key] ?? null;
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }

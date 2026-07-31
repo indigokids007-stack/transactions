@@ -6,6 +6,7 @@ use App\Enums\TransactionType;
 use App\Models\Category;
 use App\Models\Dimension;
 use App\Models\DimensionValue;
+use App\Support\Concerns\ReadsArrayValues;
 use App\Support\Money;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Database\Eloquent\Collection;
@@ -20,6 +21,8 @@ use Illuminate\Validation\Rule;
  */
 class TransactionFieldValidator
 {
+    use ReadsArrayValues;
+
     /**
      * The declarative half of those rules. Creating demands every field, editing takes
      * whichever ones it is given, and that presence marker is the only difference
@@ -259,21 +262,5 @@ class TransactionFieldValidator
 
             $validator->errors()->add('dimension_values', __('errors.dimension_value_invalid'));
         }
-    }
-
-    /** @param array<string, mixed> $data */
-    private function string(array $data, string $key): string
-    {
-        $value = $data[$key] ?? null;
-
-        return is_scalar($value) ? (string) $value : '';
-    }
-
-    /** @param array<string, mixed> $data */
-    private function integer(array $data, string $key): int
-    {
-        $value = $data[$key] ?? null;
-
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

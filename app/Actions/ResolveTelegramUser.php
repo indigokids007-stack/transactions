@@ -6,10 +6,13 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\Concerns\ReadsArrayValues;
 use Illuminate\Auth\Access\AuthorizationException;
 
 class ResolveTelegramUser
 {
+    use ReadsArrayValues;
+
     /** @var list<string> */
     private const SUPPORTED_LOCALES = ['uz', 'ru', 'en'];
 
@@ -32,7 +35,7 @@ class ResolveTelegramUser
 
             $user->update([
                 'name' => $this->name($telegramUser, $telegramId),
-                'username' => $this->string($telegramUser, 'username'),
+                'username' => $this->nonEmptyString($telegramUser, 'username'),
             ]);
 
             return $user;
@@ -45,7 +48,7 @@ class ResolveTelegramUser
         return User::create([
             'telegram_id' => $telegramId,
             'name' => $this->name($telegramUser, $telegramId),
-            'username' => $this->string($telegramUser, 'username'),
+            'username' => $this->nonEmptyString($telegramUser, 'username'),
             'role' => UserRole::Staff,
             'status' => UserStatus::Pending,
             'locale' => $this->initialLocale($languageCode),
@@ -56,23 +59,15 @@ class ResolveTelegramUser
     private function name(array $telegramUser, int $telegramId): string
     {
         $parts = array_filter([
-            $this->string($telegramUser, 'first_name'),
-            $this->string($telegramUser, 'last_name'),
+            $this->nonEmptyString($telegramUser, 'first_name'),
+            $this->nonEmptyString($telegramUser, 'last_name'),
         ]);
 
         if ($parts !== []) {
             return implode(' ', $parts);
         }
 
-        return $this->string($telegramUser, 'username') ?? "Telegram {$telegramId}";
-    }
-
-    /** @param array<string, mixed> $telegramUser */
-    private function string(array $telegramUser, string $key): ?string
-    {
-        $value = $telegramUser[$key] ?? null;
-
-        return is_string($value) && $value !== '' ? $value : null;
+        return $this->nonEmptyString($telegramUser, 'username') ?? "Telegram {$telegramId}";
     }
 
     /**
