@@ -26,19 +26,27 @@ export function readErrors(error: unknown): FieldErrors | undefined {
   return errors as FieldErrors
 }
 
-// A 422 naming either of these means a reference row (the category, or a dimension's
-// value) was deactivated after bootstrap loaded: retrying the same pick can never
-// succeed, so these get a refetch-and-reset instead of an inline field message.
+// The one list of keys a 422 can name that mean a reference row (the category, or a
+// dimension's value) was deactivated after bootstrap loaded: retrying the same pick can
+// never succeed, so these get a refetch-and-reset instead of an inline field message.
+// Every function below reads this constant rather than its own copy of the field names —
+// adding a stale-reference field means adding it HERE, and nowhere else. Two independent
+// copies of these literals is exactly how the raw backend message for a stale field once
+// leaked back into the UI alongside the friendly notice; this constant is what closes
+// that off for good.
+export const STALE_REFERENCE_FIELDS: readonly string[] = ['category_id', 'dimension_values']
+const [CATEGORY_FIELD, DIMENSION_VALUES_FIELD] = STALE_REFERENCE_FIELDS
+
 export function staleCategory(errors: FieldErrors): boolean {
-  return 'category_id' in errors
+  return CATEGORY_FIELD in errors
 }
 
 export function staleDimensions(errors: FieldErrors): boolean {
-  return 'dimension_values' in errors
+  return DIMENSION_VALUES_FIELD in errors
 }
 
 export function isStaleReference(errors: FieldErrors): boolean {
-  return staleCategory(errors) || staleDimensions(errors)
+  return STALE_REFERENCE_FIELDS.some((field) => field in errors)
 }
 
 // Drops the stale-reference keys from a field-error map so a caller that has already
@@ -47,7 +55,7 @@ export function isStaleReference(errors: FieldErrors): boolean {
 // unrelated `note` or `amount` error arriving alongside a stale category, say) survives.
 export function withoutStaleReferenceFields(errors: FieldErrors): FieldErrors {
   return Object.fromEntries(
-    Object.entries(errors).filter(([field]) => field !== 'category_id' && field !== 'dimension_values'),
+    Object.entries(errors).filter(([field]) => !STALE_REFERENCE_FIELDS.includes(field)),
   )
 }
 
