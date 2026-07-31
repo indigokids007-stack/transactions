@@ -62,7 +62,7 @@ On open the app posts `Telegram.WebApp.initData` to `/api/auth/telegram`.
 
 ## Entry
 
-The amount keypad is focused on open and parses with the bot's grammar. Category chips sit below it, ordered by the user's recent use. Dimensions collapse under a "Details" section prefilled from sticky defaults; any dimension the API marks required renders expanded and blocks save until answered. The date defaults to today.
+The amount keypad is focused on open and parses with the bot's grammar. Category chips sit below it in the tree's own `sort` order, with the sticky default first. Usage-based ordering would need an endpoint the API does not have, and inventing one here is out of scope; if the chips prove hard to scan once the real category tree lands, that is a card against the API. Dimensions collapse under a "Details" section prefilled from sticky defaults; any dimension the API marks required renders expanded and blocks save until answered. The date defaults to today.
 
 Telegram's MainButton is the save action, so the primary control is where the platform puts it. Save posts to `POST /api/transactions` with a client-generated UUID in `Idempotency-Key`, so a double tap on a poor connection cannot write twice. Success gives a haptic tick, resets the form to defaults, and shows a toast offering Undo, which calls `DELETE /api/transactions/{id}` while the toast is up.
 
