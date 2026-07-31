@@ -20,8 +20,7 @@ const TYPES = ['expense', 'income'] as const
 
 // Type, currency, date, note and the dimension picks: everything the keypad and the
 // category chips don't cover. Collapsed by default so the keypad keeps the room, but a
-// required dimension with no answer forces it open — derived at render from
-// `missingRequired`, not synced through an effect.
+// required dimension with no answer forces it open.
 export function DetailsSheet({
   values,
   dimensions,
@@ -33,11 +32,22 @@ export function DetailsSheet({
   onNoteChange,
   onDimensionChange,
 }: DetailsSheetProps) {
-  const [manuallyOpened, setManuallyOpened] = useState(false)
-  const open = manuallyOpened || missingRequired.length > 0
+  const [opened, setOpened] = useState(false)
+
+  // Adjusting state during render, not an effect: once a required dimension has ever
+  // forced the sheet open, it stays open for the rest of the entry. Without this, the
+  // moment the user picks the value that satisfies `missingRequired`, this component
+  // re-renders with `missingRequired` empty and the sheet — including the very select
+  // they just used — collapses out from under their finger. The guard (`!opened`) is
+  // what keeps this from looping: once true, the condition can't fire again.
+  if (!opened && missingRequired.length > 0) {
+    setOpened(true)
+  }
+
+  const open = opened || missingRequired.length > 0
 
   return (
-    <Sheet label={strings.entry.details} open={open} onToggle={() => setManuallyOpened((current) => !current)}>
+    <Sheet label={strings.entry.details} open={open} onToggle={() => setOpened((current) => !current)}>
       <div role="group" aria-label={strings.entry.type} className="flex gap-2">
         {TYPES.map((type) => (
           <button
@@ -100,7 +110,7 @@ export function DetailsSheet({
             className="mt-1 block w-full rounded border px-2 py-1"
           >
             <option value="" disabled>
-              …
+              {strings.entry.choose}
             </option>
             {dimension.values.map((value) => (
               <option key={value.id} value={value.id}>

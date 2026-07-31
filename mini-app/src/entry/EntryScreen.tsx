@@ -12,20 +12,31 @@ import { useEntryForm } from './useEntryForm'
 export type EntryScreenProps = {
   bootstrap: Bootstrap
   client: ApiClient
+  /**
+   * Whether the Add tab is the one showing. All three tab panels stay mounted (so each
+   * keeps its own state across a switch — see `App.tsx`), so without this `EntryScreen`
+   * would keep Telegram's MainButton bound and tappable while the user is looking at
+   * Reports or History, saving an entry from a screen they can't see. Defaults to `true`
+   * so a bare `<EntryScreen>` (as most tests render it) behaves the way it always did.
+   */
+  active?: boolean
 }
 
 // The staff expense entry screen: an amount keypad, the category chips, a collapsible
 // details sheet, and a save action. Telegram's MainButton mirrors `canSave` and drives
 // `save()` when the app is embedded; outside Telegram (a browser tab, or a test) an
 // ordinary button takes its place, since there is no MainButton to click there.
-export function EntryScreen({ bootstrap, client }: EntryScreenProps) {
+export function EntryScreen({ bootstrap, client, active = true }: EntryScreenProps) {
   const form = useEntryForm(bootstrap, client)
   const insideTelegram = window.Telegram?.WebApp !== undefined
 
   // MainButton is Telegram's own chrome, not something this tree renders, so binding and
   // unbinding its click handler is a genuine effect: it synchronises with an external
-  // system rather than deriving anything from render.
+  // system rather than deriving anything from render. Skipped entirely while another tab
+  // is showing, so the handler is never bound behind the user's back.
   useEffect(() => {
+    if (!active) return
+
     const button = webApp().MainButton
     button.setText(strings.entry.save)
     button.show()
@@ -38,16 +49,18 @@ export function EntryScreen({ bootstrap, client }: EntryScreenProps) {
     return () => {
       button.offClick(handleClick)
     }
-  }, [form.save])
+  }, [form.save, active])
 
   useEffect(() => {
+    if (!active) return
+
     const button = webApp().MainButton
     if (form.canSave) {
       button.enable()
     } else {
       button.disable()
     }
-  }, [form.canSave])
+  }, [form.canSave, active])
 
   return (
     <div className="flex flex-col pb-6">
@@ -82,6 +95,14 @@ export function EntryScreen({ bootstrap, client }: EntryScreenProps) {
         <p role="alert" className="px-4 py-2 text-sm" style={{ color: 'var(--tg-hint)' }}>
           {form.notice}
         </p>
+      ) : null}
+
+      {Object.keys(form.fieldErrors).length > 0 ? (
+        <ul role="alert" className="space-y-1 px-4 py-2 text-sm" style={{ color: 'var(--tg-hint)' }}>
+          {Object.entries(form.fieldErrors).map(([field, messages]) => (
+            <li key={field}>{messages[0]}</li>
+          ))}
+        </ul>
       ) : null}
 
       {!insideTelegram ? (

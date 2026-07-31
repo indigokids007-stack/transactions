@@ -35,8 +35,13 @@ export const strings = {
     save: 'Saqlash',
     saved: 'Saqlandi.',
     undo: 'Bekor qilish',
+    choose: 'Tanlang',
     // Shown when a 422 names `category_id` or `dimension_values`: the reference row was
     // deactivated since bootstrap loaded, so retrying the same pick cannot succeed.
     referenceChanged: "Ma'lumotlar yangilandi. Iltimos, qayta tanlang.",
+    // Shown for any save failure that isn't a validation 422 (network, 500, malformed
+    // body): the one signal the brief doesn't have a dedicated flow for, so it borrows
+    // `notice` rather than leaving the tap looking like it did nothing at all.
+    saveFailed: "Saqlashda xatolik yuz berdi. Qaytadan urinib ko'ring.",
   },
 } as const

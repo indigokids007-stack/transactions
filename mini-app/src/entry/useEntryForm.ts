@@ -1,18 +1,12 @@
 import { useRef, useState } from 'react'
 import { parseAmount } from './parseAmount'
+import { valuesFromDefaults, type EntryValues } from './entryDefaults'
+import { isStaleReference, readErrors, readStatus, resolveStaleReference } from './entryErrors'
 import type { ApiClient } from '../api/client'
 import type { ApiTransaction, Bootstrap, TransactionWrite } from '../api/types'
 import { strings } from '../strings'
 
-export type EntryValues = {
-  type: 'income' | 'expense'
-  currency: string
-  categoryId: number | null
-  dimensionValues: Record<number, number>
-  amountInput: string
-  note: string
-  occurredOn: string
-}
+export type { EntryValues } from './entryDefaults'
 
 export type EntryForm = {
   values: EntryValues
@@ -35,48 +29,6 @@ export type EntryForm = {
   notice: string | null
 }
 
-// The keys a 422 can name that mean a reference row (the category, or a dimension's
-// value) was deactivated after bootstrap loaded: retrying the same pick can never
-// succeed, so these get a refetch-and-reset instead of an inline field message.
-const STALE_REFERENCE_FIELDS = ['category_id', 'dimension_values'] as const
-
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function valuesFromDefaults(bootstrap: Bootstrap): EntryValues {
-  return {
-    type: bootstrap.defaults.type,
-    currency: bootstrap.defaults.currency,
-    categoryId: bootstrap.defaults.category_id,
-    dimensionValues: { ...bootstrap.defaults.dimension_values },
-    amountInput: '',
-    note: '',
-    occurredOn: todayIso(),
-  }
-}
-
-// Duck-typed the way `useSession`'s `toRejectedState` reads a rejection: the real
-// `ApiError` carries `status`/`errors`, and tests stand in a plain object of the same
-// shape, so neither an `instanceof` check nor a specific error type should be required.
-function readStatus(error: unknown): number | undefined {
-  if (typeof error === 'object' && error !== null && 'status' in error) {
-    const status = (error as { status?: unknown }).status
-    return typeof status === 'number' ? status : undefined
-  }
-  return undefined
-}
-
-function readErrors(error: unknown): Record<string, string[]> | undefined {
-  if (typeof error !== 'object' || error === null || !('errors' in error)) return undefined
-
-  const errors = (error as { errors?: unknown }).errors
-  if (typeof errors !== 'object' || errors === null) return undefined
-  if (!Object.values(errors).every((messages) => Array.isArray(messages))) return undefined
-
-  return errors as Record<string, string[]>
-}
-
 export function useEntryForm(bootstrap: Bootstrap, client: ApiClient): EntryForm {
   const [reference, setReference] = useState(bootstrap)
   const [values, setValues] = useState<EntryValues>(() => valuesFromDefaults(bootstrap))
@@ -93,13 +45,18 @@ export function useEntryForm(bootstrap: Bootstrap, client: ApiClient): EntryForm
     .map((dimension) => dimension.name)
   const canSave = parsedAmount !== null && missingRequired.length === 0
 
-  function setAmount(input: string): void {
-    setValues((current) => ({ ...current, amountInput: input }))
+  // Every setter is the same shape — patch one or more fields onto the current values —
+  // except `setDimension`, which needs the current `dimensionValues` to merge into.
+  function patch(next: Partial<EntryValues>): void {
+    setValues((current) => ({ ...current, ...next }))
   }
 
-  function setCategory(id: number): void {
-    setValues((current) => ({ ...current, categoryId: id }))
-  }
+  const setAmount = (input: string): void => patch({ amountInput: input })
+  const setCategory = (id: number): void => patch({ categoryId: id })
+  const setType = (type: 'income' | 'expense'): void => patch({ type })
+  const setCurrency = (currency: string): void => patch({ currency })
+  const setNote = (note: string): void => patch({ note })
+  const setDate = (date: string): void => patch({ occurredOn: date })
 
   function setDimension(dimensionId: number, valueId: number): void {
     setValues((current) => ({
@@ -108,31 +65,27 @@ export function useEntryForm(bootstrap: Bootstrap, client: ApiClient): EntryForm
     }))
   }
 
-  function setType(type: 'income' | 'expense'): void {
-    setValues((current) => ({ ...current, type }))
-  }
+  // Every branch of a failed save reports through `fieldErrors`/`notice` rather than
+  // rejecting: the caller (a MainButton click, or the fallback button's `onClick`) never
+  // has to `catch` a rejection to give the user a signal, and there is exactly one place
+  // — here — that decides what a given failure means.
+  async function handleSaveError(error: unknown): Promise<void> {
+    const status = readStatus(error)
+    const errors = readErrors(error)
 
-  function setCurrency(currency: string): void {
-    setValues((current) => ({ ...current, currency }))
-  }
+    if (status !== 422 || !errors) {
+      setNotice(strings.entry.saveFailed)
+      return
+    }
 
-  function setNote(note: string): void {
-    setValues((current) => ({ ...current, note }))
-  }
+    setFieldErrors(errors)
 
-  function setDate(date: string): void {
-    setValues((current) => ({ ...current, occurredOn: date }))
-  }
-
-  async function handleStaleReference(errors: Record<string, string[]>): Promise<void> {
-    const refreshed = await client.bootstrap()
-    setReference(refreshed)
-    setNotice(strings.entry.referenceChanged)
-    setValues((current) => ({
-      ...current,
-      categoryId: 'category_id' in errors ? refreshed.defaults.category_id : current.categoryId,
-      dimensionValues: 'dimension_values' in errors ? {} : current.dimensionValues,
-    }))
+    if (isStaleReference(errors)) {
+      const resolution = await resolveStaleReference(errors, client, values)
+      setReference(resolution.reference)
+      setNotice(strings.entry.referenceChanged)
+      patch({ categoryId: resolution.categoryId, dimensionValues: resolution.dimensionValues })
+    }
   }
 
   async function save(): Promise<void> {
@@ -160,19 +113,7 @@ export function useEntryForm(bootstrap: Bootstrap, client: ApiClient): EntryForm
       setLastSaved(response.data)
       setValues(valuesFromDefaults(reference))
     } catch (error) {
-      const status = readStatus(error)
-      const errors = readErrors(error)
-
-      if (status === 422 && errors) {
-        setFieldErrors(errors)
-
-        if (STALE_REFERENCE_FIELDS.some((field) => field in errors)) {
-          await handleStaleReference(errors)
-        }
-        return
-      }
-
-      throw error
+      await handleSaveError(error)
     }
   }
 

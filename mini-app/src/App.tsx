@@ -68,7 +68,7 @@ export function App({ session, onRetry, client }: AppProps) {
             hidden={item.id !== tab}
           >
             {item.id === 'add' && client ? (
-              <EntryScreen bootstrap={session.bootstrap} client={client} />
+              <EntryScreen bootstrap={session.bootstrap} client={client} active={tab === 'add'} />
             ) : (
               <PanelPlaceholder label={item.label} />
             )}
