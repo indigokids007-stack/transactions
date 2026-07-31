@@ -31,12 +31,17 @@ const BOUND = /^[0-9]{1,15}$/
 
 /**
  * The exact set the backend flattens, which is neither engine's default. PHP compiles `/u`
- * with PCRE2_UCP, so its `[\s\p{Z}]` is Unicode-aware and covers 26 code points; the extra
- * two over `\p{White_Space}` are U+0085, which PCRE's `\v` adds, and U+180E, which its `\h`
- * adds. JavaScript's own `\s` is a different set again: it omits both and swallows U+FEFF,
- * which PCRE does not, so borrowing it would let the client read a byte order mark the
- * server refuses. A code-point sweep of both engines confirms this class and PHP's agree on
- * all 1,114,112 code points, in both directions.
+ * with PCRE2_UCP, so its `[\s\p{Z}]` is Unicode-aware and covers 26 code points.
+ * `\p{White_Space}` is 25 of those 26 in both engines, so U+180E is the single addition this
+ * class has to make: Unicode 6.3 moved it out of the property, and PCRE still reaches it
+ * through `\h`. JavaScript's own `\s` is a different set again, omitting U+180E and
+ * swallowing U+FEFF, which PCRE does not, so borrowing it would let the client read a byte
+ * order mark the server refuses.
+ *
+ * Every claim above was measured by sweeping all 1,114,112 code points through both engines,
+ * not read from documentation. That sweep is what catches a wrong set relationship; two
+ * earlier versions of this comment were plausible, cited real constructs, and were false.
+ * It reports this class and PHP's agreeing exactly, with no exclusive on either side.
  *
  * Bank apps and spreadsheets paste U+00A0, U+202F, U+2009 and U+2007 as thousands
  * separators, and those must refuse exactly the way `100 000` refuses.
