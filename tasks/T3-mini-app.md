@@ -4,6 +4,7 @@ intent_source: "Brainstormed 2026-07-31: Telegram mini app against the finished 
 created: 2026-07-31
 role_history: [planner: claude-opus-5, builder: claude-code-subagents, reviewer: pending]
 lane: full
+review_rounds_used: 0
 ---
 
 ## Task: Cara transactions Telegram mini app
