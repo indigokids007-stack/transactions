@@ -4,7 +4,12 @@ import { useState } from 'react'
 import { AppRoot } from './AppRoot'
 import { createClient } from './api/client'
 
-// The exchange never resolves: the point of this suite is call counts, not the
+// What this guards against: if `AppRoot` ever created its client from inside its own
+// render body instead of at module scope, `useSession`'s effect (which lists `client` in
+// its dependency array) would re-run on every unrelated re-render, re-authenticating
+// against the live Telegram/API exchange in a loop for as long as the component tree
+// stays mounted — not a one-off glitch but a runaway request loop against production.
+// The exchange never resolves here: the point of this suite is call counts, not the
 // resulting session state, so there is nothing to wait for.
 vi.mock('./api/client', () => ({
   createClient: vi.fn(() => ({

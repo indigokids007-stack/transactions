@@ -43,6 +43,8 @@ it('applies the Telegram theme params when present, and calls ready/expand', () 
       ready,
       expand,
       close: () => {},
+      onEvent: () => {},
+      offEvent: () => {},
     },
   }
 
@@ -54,4 +56,50 @@ it('applies the Telegram theme params when present, and calls ready/expand', () 
   expect(readVar('--tg-hint')).toBe('#707579')
   expect(ready).toHaveBeenCalledOnce()
   expect(expand).toHaveBeenCalledOnce()
+})
+
+it('re-applies the theme when Telegram fires themeChanged, and unsubscribes on cleanup', () => {
+  let themeChangedCallback: (() => void) | undefined
+  const offEvent = vi.fn()
+  const themeParams: Record<string, string> = { bg_color: '#111111' }
+
+  window.Telegram = {
+    WebApp: {
+      initData: '',
+      colorScheme: 'dark',
+      themeParams,
+      MainButton: {
+        text: '',
+        isVisible: false,
+        isActive: true,
+        setText: () => {},
+        show: () => {},
+        hide: () => {},
+        enable: () => {},
+        disable: () => {},
+        onClick: () => {},
+        offClick: () => {},
+      },
+      ready: () => {},
+      expand: () => {},
+      close: () => {},
+      onEvent: (eventType, callback) => {
+        if (eventType === 'themeChanged') themeChangedCallback = callback
+      },
+      offEvent,
+    },
+  }
+
+  const { unmount } = renderHook(() => useTheme())
+
+  expect(readVar('--tg-bg')).toBe('#111111')
+
+  // Telegram updates its own theme params, then notifies the app.
+  themeParams.bg_color = '#222222'
+  themeChangedCallback?.()
+
+  expect(readVar('--tg-bg')).toBe('#222222')
+
+  unmount()
+  expect(offEvent).toHaveBeenCalledWith('themeChanged', themeChangedCallback)
 })

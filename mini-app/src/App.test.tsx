@@ -48,8 +48,38 @@ it('renders the three tabs for an active user', () => {
   expect(screen.getByRole('tab', { name: strings.tabs.history })).toBeInTheDocument()
 })
 
+// This only proves no tab is ever named `strings.tabs.staff` — it says nothing about
+// permission gating. The staff comparison itself lives inside the Reports tab, gated by
+// `permissions.can_see_all`/`can_manage`, and arrives with Task 8.
 it('hides the staff comparison for a user who cannot see others', () => {
   render(<App session={activeSession} />)
 
   expect(screen.queryByRole('tab', { name: strings.tabs.staff })).not.toBeInTheDocument()
+})
+
+it('has an aria-controls target that resolves to an element in the document, for every tab', () => {
+  render(<App session={activeSession} />)
+
+  const tabs = screen.getAllByRole('tab')
+  expect(tabs).toHaveLength(3)
+
+  for (const tab of tabs) {
+    const controlsId = tab.getAttribute('aria-controls')
+    expect(controlsId).toBeTruthy()
+    expect(document.getElementById(controlsId as string)).not.toBeNull()
+  }
+})
+
+it('keeps a tab mounted (not torn down) so its state survives switching away and back', async () => {
+  const user = userEvent.setup()
+  render(<App session={activeSession} />)
+
+  const addInput = screen.getByRole('textbox', { name: strings.tabs.add })
+  await user.type(addInput, 'tuzatildi')
+  expect(addInput).toHaveValue('tuzatildi')
+
+  await user.click(screen.getByRole('tab', { name: strings.tabs.history }))
+  await user.click(screen.getByRole('tab', { name: strings.tabs.add }))
+
+  expect(screen.getByRole('textbox', { name: strings.tabs.add })).toHaveValue('tuzatildi')
 })

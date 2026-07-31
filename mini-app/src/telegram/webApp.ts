@@ -1,6 +1,9 @@
 // The subset of Telegram's WebApp JS API (`https://telegram.org/js/telegram-web-app.js`)
 // this app uses. Grows as later tasks touch more of it (Task 3 reads `themeParams`,
-// `ready()` and `expand()`; a later task drives `MainButton` from the entry form).
+// `ready()`, `expand()` and now subscribes to `themeChanged`; a later task drives
+// `MainButton` from the entry form).
+export type TelegramEventType = 'themeChanged'
+
 export type TelegramMainButton = {
   text: string
   isVisible: boolean
@@ -22,6 +25,8 @@ export type TelegramWebApp = {
   ready(): void
   expand(): void
   close(): void
+  onEvent(eventType: TelegramEventType, callback: () => void): void
+  offEvent(eventType: TelegramEventType, callback: () => void): void
 }
 
 declare global {
@@ -56,6 +61,8 @@ function stub(): TelegramWebApp {
     ready: () => {},
     expand: () => {},
     close: () => {},
+    onEvent: () => {},
+    offEvent: () => {},
   }
 }
 

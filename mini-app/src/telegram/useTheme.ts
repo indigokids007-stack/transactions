@@ -13,19 +13,29 @@ const THEME_MAPPINGS: { cssVar: string; paramKey: string; fallback: string }[] =
 ]
 
 // Synchronises the document with Telegram's WebApp runtime: applies its theme colours as
-// CSS custom properties and tells the client the app is ready to be shown. Runs once per
-// mount — nothing reactive from render feeds it, so there is nothing to add to the
-// dependency array and nothing to unsubscribe on cleanup.
+// CSS custom properties, tells the client the app is ready to be shown, and keeps
+// listening for `themeChanged` (the user can switch Telegram's own theme while the app
+// is open). Runs once per mount — nothing reactive from render feeds it, so there is
+// nothing to add to the dependency array — but it does subscribe to an external event,
+// so it unsubscribes the same listener on cleanup.
 export function useTheme(): void {
   useEffect(() => {
     const app = webApp()
     const root = document.documentElement
 
-    for (const { cssVar, paramKey, fallback } of THEME_MAPPINGS) {
-      root.style.setProperty(cssVar, app.themeParams[paramKey] ?? fallback)
+    function applyTheme(): void {
+      for (const { cssVar, paramKey, fallback } of THEME_MAPPINGS) {
+        root.style.setProperty(cssVar, app.themeParams[paramKey] ?? fallback)
+      }
     }
 
+    applyTheme()
     app.ready()
     app.expand()
+
+    app.onEvent('themeChanged', applyTheme)
+    return () => {
+      app.offEvent('themeChanged', applyTheme)
+    }
   }, [])
 }
