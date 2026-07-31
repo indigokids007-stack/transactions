@@ -5,6 +5,7 @@ import type { SessionState } from '../auth/useSession'
 import type { ApiClient } from '../api/client'
 import type {
   ApiTransaction,
+  ApiTransactionRevision,
   ApiUser,
   Bootstrap,
   SummaryReport,
@@ -22,6 +23,7 @@ export function clientStub(overrides: Partial<ApiClient> = {}): ApiClient {
     createTransaction: vi.fn().mockResolvedValue({ data: { id: 1 } } as TransactionResponse),
     updateTransaction: vi.fn().mockResolvedValue({ data: { id: 1 } } as TransactionResponse),
     deleteTransaction: vi.fn().mockResolvedValue(undefined),
+    revisions: vi.fn().mockResolvedValue([] as ApiTransactionRevision[]),
     summary: vi.fn().mockResolvedValue({ totals: [], groups: [] }),
     trend: vi.fn().mockResolvedValue({ points: [] }),
     ...overrides,
@@ -72,6 +74,16 @@ export const ownerUser: ApiUser = {
   name: 'Oybek Rashidov',
   username: 'oybek_owner',
   role: 'owner',
+  permissions: { can_see_all: true, can_manage: true },
+}
+
+export const adminUser: ApiUser = {
+  ...staffUser,
+  id: 5,
+  telegram_id: 100005,
+  name: 'Dilnoza Sodiqova',
+  username: 'dilnoza_admin',
+  role: 'admin',
   permissions: { can_see_all: true, can_manage: true },
 }
 

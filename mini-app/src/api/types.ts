@@ -132,3 +132,15 @@ export type CursorPage<T> = {
 }
 
 export type TransactionResponse = { data: ApiTransaction }
+
+// One row of `GET /api/transactions/{id}/revisions`, mirrored from
+// `TransactionRevisionResource`. The mini app only reads the collection's length today
+// (the sheet's read-only revision count); `snapshot` is left as `unknown` rather than
+// typed field by field since nothing here reads into it yet.
+export type ApiTransactionRevision = {
+  id: number
+  action: 'created' | 'updated' | 'deleted' | 'restored'
+  actor: { id: number; name: string }
+  snapshot: Record<string, unknown>
+  created_at: string
+}

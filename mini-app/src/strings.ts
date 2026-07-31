@@ -46,6 +46,10 @@ export const strings = {
     // body): the one signal the brief doesn't have a dedicated flow for, so it borrows
     // `notice` rather than leaving the tap looking like it did nothing at all.
     saveFailed: "Saqlashda xatolik yuz berdi. Qaytadan urinib ko'ring.",
+    // Shown under the amount field the moment it holds text `parseAmount` refuses.
+    // Mirrors the Telegram bot's own `unparseable` wording (lang/uz/bot.php) so the same
+    // grammar failure reads the same way in both surfaces.
+    invalidAmount: "Summani tushunmadim. Masalan: 120000, 12.500, 30 ming.",
   },
   reports: {
     period: 'Davr',
@@ -84,5 +88,11 @@ export const strings = {
     // `message` (a 403/404 refusal, or anything else) reaches the user verbatim rather
     // than being replaced with a client-side guess about why it failed.
     actionFailed: "Amalni bajarib bo'lmadi.",
+    // The read-only recap in the sheet: labels for fields no edit form ever showed
+    // (amount, whose record it is, which department) plus the revision count.
+    person: 'Xodim',
+    department: "Bo'lim",
+    noDepartment: "Bo'lim yo'q",
+    revisions: "O'zgarishlar soni",
   },
 } as const

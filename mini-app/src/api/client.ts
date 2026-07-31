@@ -1,5 +1,6 @@
 import type {
   ApiTransaction,
+  ApiTransactionRevision,
   AuthExchange,
   Bootstrap,
   CursorPage,
@@ -25,6 +26,7 @@ export type ApiClient = {
   createTransaction(body: TransactionWrite, idempotencyKey?: string): Promise<TransactionResponse>
   updateTransaction(id: number, body: TransactionWrite): Promise<TransactionResponse>
   deleteTransaction(id: number): Promise<void>
+  revisions(id: number): Promise<ApiTransactionRevision[]>
   summary(params: ReportParams): Promise<SummaryReport>
   trend(params: ReportParams): Promise<TrendReport>
 }
@@ -133,6 +135,16 @@ export function createClient(baseUrl: string, fetchImpl: FetchImpl = fetch): Api
 
     deleteTransaction: (id) =>
       request<void>(`/api/transactions/${id}`, { method: 'DELETE' }),
+
+    // `TransactionRevisionResource::collection(...)` is the controller action's own
+    // top-level return, so — unlike `bootstrap()` — it does carry Laravel's `data`
+    // wrapper (`assertJsonCount(1, 'data')` in `UpdateDeleteTransactionTest.php:217`
+    // pins the shape); unwrapped here so a caller reads a plain array, the same as
+    // every other list this client hands back.
+    revisions: (id) =>
+      request<{ data: ApiTransactionRevision[] }>(`/api/transactions/${id}/revisions`).then(
+        (body) => body.data,
+      ),
 
     summary: (params) => request<SummaryReport>(`/api/reports/summary${toQueryString(params)}`),
 

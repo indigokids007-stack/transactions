@@ -11,11 +11,11 @@ type TransactionFieldsProps = {
 
 const TYPES = ['expense', 'income'] as const
 
-// The editable fields of one transaction — type, category, currency, date, note, and
-// every active dimension — split out of `TransactionSheet` purely to keep that file's
-// line count down, the same way `DetailsSheet` holds the entry form's own fields
-// separately from `EntryScreen`. Amount is not here: see `transactionEdit.ts`'s doc
-// comment for why.
+// The editable fields of one transaction — type, category, date, note, and every active
+// dimension — split out of `TransactionSheet` purely to keep that file's line count
+// down, the same way `DetailsSheet` holds the entry form's own fields separately from
+// `EntryScreen`. Amount and currency are not here: see `transactionEdit.ts`'s doc comment
+// for why — the currency control is `TransactionSheet`'s read-only header instead.
 export function TransactionFields({ values, bootstrap, onChange }: TransactionFieldsProps) {
   return (
     <>
@@ -47,21 +47,6 @@ export function TransactionFields({ values, bootstrap, onChange }: TransactionFi
           {flattenCategories(bootstrap.categories).map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="block text-sm">
-        {strings.entry.currency}
-        <select
-          value={values.currency}
-          onChange={(event) => onChange({ currency: event.target.value })}
-          className="mt-1 block w-full rounded border px-2 py-1"
-        >
-          {Object.keys(bootstrap.currencies).map((code) => (
-            <option key={code} value={code}>
-              {code}
             </option>
           ))}
         </select>

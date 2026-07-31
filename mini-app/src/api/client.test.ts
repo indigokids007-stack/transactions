@@ -64,6 +64,24 @@ describe('createClient', () => {
     expect(init.headers.Authorization).toBeUndefined()
   })
 
+  // `TransactionRevisionResource::collection(...)` is a top-level controller return, so
+  // — unlike `bootstrap()` — the response does carry Laravel's `data` wrapper
+  // (`tests/Feature/Api/UpdateDeleteTransactionTest.php:217` asserts
+  // `assertJsonCount(1, 'data')`). The client must unwrap it so a caller reads a plain
+  // array, the same as every other list this client hands back.
+  it('unwraps the revisions envelope into a plain array', async () => {
+    const revision = { id: 9, action: 'updated', actor: { id: 1, name: 'A' }, snapshot: {}, created_at: 'x' }
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: [revision] }), { status: 200 }),
+    )
+    const client = createClient('https://api.test', fetchMock)
+
+    await expect(client.revisions(5)).resolves.toEqual([revision])
+
+    const [url] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/transactions/5/revisions')
+  })
+
   it('re-authenticates once on a 401 and retries the original call', async () => {
     // A `Response` body can only be read once, so a fresh instance is needed per call
     // even when two calls carry the same payload.

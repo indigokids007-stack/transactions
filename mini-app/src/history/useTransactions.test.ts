@@ -102,3 +102,77 @@ it('does not let a stale filter response overwrite a newer one', async () => {
 
   expect(result.current.items.map((item) => item.id)).toEqual([2])
 })
+
+// The MAJOR finding by name: category A's next page is still in flight when the user
+// switches to category B. B's own first page must win, and A's page — arriving late —
+// must never land on top of it via `setItems(current => [...current, ...page.data])`.
+it('discards a stale loadMore page that settles after the filters changed', async () => {
+  const resolvers: Array<(page: CursorPage<ApiTransaction>) => void> = []
+  const listTransactions = vi.fn().mockImplementation(
+    () => new Promise<CursorPage<ApiTransaction>>((resolve) => resolvers.push(resolve)),
+  )
+  const client = { listTransactions }
+
+  const { result, rerender } = renderHook(({ filters }) => useTransactions(client, filters), {
+    initialProps: { filters: { category_id: 1 } },
+  })
+
+  await waitFor(() => expect(resolvers).toHaveLength(1))
+  act(() => resolvers[0]({ data: [transaction(1)], meta: { next_cursor: 'a-next' } }))
+  await waitFor(() => expect(result.current.hasMore).toBe(true))
+
+  // Category A's next page starts loading ...
+  let loadMorePromise: Promise<void> = Promise.resolve()
+  act(() => {
+    loadMorePromise = result.current.loadMore()
+  })
+  await waitFor(() => expect(resolvers).toHaveLength(2))
+
+  // ... but before it resolves, the user switches to category B, whose own first page
+  // resolves first.
+  rerender({ filters: { category_id: 2 } })
+  await waitFor(() => expect(resolvers).toHaveLength(3))
+  act(() => resolvers[2]({ data: [transaction(2)], meta: { next_cursor: null } }))
+  await waitFor(() => expect(result.current.items.map((item) => item.id)).toEqual([2]))
+
+  // Category A's stale next page finally settles — it must not append to B's list.
+  await act(async () => {
+    resolvers[1]({ data: [transaction(3)], meta: { next_cursor: null } })
+    await loadMorePromise
+  })
+
+  expect(result.current.items.map((item) => item.id)).toEqual([2])
+})
+
+// The second half of the same finding: no loading guard meant the observer could ask
+// for the same cursor twice concurrently.
+it('does not start a second request while a loadMore call is already in flight', async () => {
+  let resolveSecondPage: ((page: CursorPage<ApiTransaction>) => void) | null = null
+  const listTransactions = vi
+    .fn()
+    .mockResolvedValueOnce({ data: [transaction(1)], meta: { next_cursor: 'a-next' } })
+    .mockImplementationOnce(
+      () =>
+        new Promise<CursorPage<ApiTransaction>>((resolve) => {
+          resolveSecondPage = resolve
+        }),
+    )
+  const client = { listTransactions }
+  const { result } = renderHook(() => useTransactions(client, {}))
+
+  await waitFor(() => expect(result.current.hasMore).toBe(true))
+
+  let first: Promise<void> = Promise.resolve()
+  let second: Promise<void> = Promise.resolve()
+  act(() => {
+    first = result.current.loadMore()
+    second = result.current.loadMore()
+  })
+
+  await act(async () => {
+    resolveSecondPage?.({ data: [transaction(2)], meta: { next_cursor: null } })
+    await Promise.all([first, second])
+  })
+
+  expect(listTransactions).toHaveBeenCalledTimes(2)
+})

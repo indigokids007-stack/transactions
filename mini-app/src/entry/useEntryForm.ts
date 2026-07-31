@@ -27,6 +27,8 @@ export type EntryForm = {
   setNote: (note: string) => void
   setDate: (date: string) => void
   canSave: boolean
+  /** True once the field holds text `parseAmount` refuses — never true while it's empty. */
+  amountInvalid: boolean
   missingRequired: string[]
   save: () => Promise<void>
   lastSaved: ApiTransaction | null
@@ -50,6 +52,7 @@ export function useEntryForm(bootstrap: Bootstrap, client: ApiClient): EntryForm
     .filter((dimension) => dimension.is_required && values.dimensionValues[dimension.id] === undefined)
     .map((dimension) => dimension.name)
   const canSave = parsedAmount !== null && missingRequired.length === 0
+  const amountInvalid = values.amountInput !== '' && parsedAmount === null
 
   // Every setter is the same shape — patch one or more fields onto the current values —
   // except `setDimension`, which needs the current `dimensionValues` to merge into.
@@ -149,6 +152,7 @@ export function useEntryForm(bootstrap: Bootstrap, client: ApiClient): EntryForm
     setNote,
     setDate,
     canSave,
+    amountInvalid,
     missingRequired,
     save,
     lastSaved,

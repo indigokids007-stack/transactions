@@ -15,6 +15,47 @@ async function enterValidTransaction() {
   await userEvent.click(screen.getByRole('button', { name: strings.entry.save }))
 }
 
+// The grammar `parseAmount` accepts is reachable only through a real text input; typing
+// a magnitude word and a comma-separated group prove that reach, not just the digit
+// keypad (which never offered a way to type either).
+it('saves a magnitude word typed into the amount field as its multiplied value', async () => {
+  const client = clientStub()
+  render(<EntryScreen bootstrap={bootstrapFixture} client={client} />)
+
+  await userEvent.type(screen.getByLabelText(strings.entry.amount), '30 ming')
+  await userEvent.selectOptions(screen.getByLabelText('Filial'), '9')
+  await userEvent.click(screen.getByRole('button', { name: strings.entry.save }))
+
+  expect(client.createTransaction).toHaveBeenCalledWith(
+    expect.objectContaining({ amount: '30000' }),
+    expect.any(String),
+  )
+})
+
+it('saves a comma-separated amount typed into the amount field padded to its group', async () => {
+  const client = clientStub()
+  render(<EntryScreen bootstrap={bootstrapFixture} client={client} />)
+
+  await userEvent.type(screen.getByLabelText(strings.entry.amount), '12,50')
+  await userEvent.selectOptions(screen.getByLabelText('Filial'), '9')
+  await userEvent.click(screen.getByRole('button', { name: strings.entry.save }))
+
+  expect(client.createTransaction).toHaveBeenCalledWith(
+    expect.objectContaining({ amount: '12500' }),
+    expect.any(String),
+  )
+})
+
+it('shows a hint instead of saving when the amount does not parse', async () => {
+  const client = clientStub()
+  render(<EntryScreen bootstrap={bootstrapFixture} client={client} />)
+
+  await userEvent.type(screen.getByLabelText(strings.entry.amount), '100 000')
+
+  expect(await screen.findByText(strings.entry.invalidAmount)).toBeInTheDocument()
+  expect(client.createTransaction).not.toHaveBeenCalled()
+})
+
 it('names the required dimension instead of saving', async () => {
   const client = clientStub()
   render(<EntryScreen bootstrap={bootstrapFixture} client={client} />)

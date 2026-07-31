@@ -75,10 +75,31 @@ export function EntryScreen({ bootstrap, client, active = true }: EntryScreenPro
 
   return (
     <div className="flex flex-col pb-6">
-      <div className="p-4 text-center text-4xl font-semibold tabular-nums">
-        {form.values.amountInput || '0'}
-        <span className="ml-2 text-lg opacity-70">{form.values.currency}</span>
+      <div className="flex items-baseline justify-center gap-2 p-4">
+        {/* A real text input, not a display span: the approved amount grammar (comma,
+            `k`, `ming`, `mln`, `mlrd`, and their Cyrillic spellings — see `parseAmount`'s
+            doc comment) is typed here directly. `inputMode="decimal"` only hints a
+            numeric-leaning keyboard; the field still accepts the letters that grammar
+            needs, exactly the way a plain `type="text"` would. The keypad below stays as
+            a convenience for the pure-digit case, writing into the same value. */}
+        <input
+          type="text"
+          inputMode="decimal"
+          aria-label={strings.entry.amount}
+          value={form.values.amountInput}
+          onChange={(event) => form.setAmount(event.target.value)}
+          placeholder="0"
+          className="w-48 bg-transparent text-right text-4xl font-semibold tabular-nums outline-none"
+          style={{ color: 'var(--tg-text)' }}
+        />
+        <span className="text-lg opacity-70">{form.values.currency}</span>
       </div>
+
+      {form.amountInvalid ? (
+        <p role="alert" className="px-4 text-center text-sm" style={{ color: 'var(--tg-hint)' }}>
+          {strings.entry.invalidAmount}
+        </p>
+      ) : null}
 
       <CategoryChips
         categories={form.categories}

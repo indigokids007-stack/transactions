@@ -10,11 +10,17 @@
 // minor-unit amount than the one being displayed. That mismatch is exactly the
 // client/server amount-grammar drift the task brief calls out as the one risk worth
 // naming; leaving amount out of this form avoids it rather than papering over it.
+//
+// Currency is left out for the same reason amount is, and for one more of its own: the
+// server requires a new `amount` in the same request whenever `currency` changes
+// (`tests/Feature/Api/UpdateDeleteTransactionTest.php:105`), and this form has nowhere
+// to collect that amount without reopening the exact drift above. A currency control
+// with no way to satisfy the server's own rule is a control that always 422s, so it is
+// shown read-only in `TransactionSheet`'s header instead of offered here.
 import type { ApiTransaction, TransactionWrite } from '../api/types'
 
 export type TransactionEditValues = {
   type: 'income' | 'expense'
-  currency: string
   categoryId: number
   note: string
   occurredOn: string
@@ -24,7 +30,6 @@ export type TransactionEditValues = {
 export function valuesFromTransaction(transaction: ApiTransaction): TransactionEditValues {
   return {
     type: transaction.type,
-    currency: transaction.currency,
     categoryId: transaction.category.id,
     note: transaction.note ?? '',
     occurredOn: transaction.occurred_on,
@@ -46,7 +51,6 @@ export function diffValues(original: TransactionEditValues, current: Transaction
   const changes: TransactionWrite = {}
 
   if (current.type !== original.type) changes.type = current.type
-  if (current.currency !== original.currency) changes.currency = current.currency
   if (current.categoryId !== original.categoryId) changes.category_id = current.categoryId
   if (current.note !== original.note) changes.note = current.note === '' ? null : current.note
   if (current.occurredOn !== original.occurredOn) changes.occurred_on = current.occurredOn

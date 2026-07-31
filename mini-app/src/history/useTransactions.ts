@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ApiClient } from '../api/client'
 import type { ApiTransaction, TransactionListParams } from '../api/types'
 
@@ -40,13 +40,24 @@ function buildParams(filters: HistoryFilters, cursor?: string): TransactionListP
 
 // Fetches the first page whenever a filter changes (or `reload` is called), and appends
 // further pages only when a caller explicitly asks via `loadMore` — the bottom-of-list
-// intersection observer in `TransactionList`. Mirrors `SummaryView`'s fetch effect: the
-// `ignore` flag is what keeps a stale filter change from clobbering a fresher one that
-// happens to resolve first. `filters.dimension` is an object a caller may recreate every
-// render even when its contents haven't changed, so the effect depends on its serialised
-// form rather than its identity — the effect body still reads the live `filters` value,
-// which is correct because the closure that runs is always the one from the render that
-// last actually changed `dimensionKey`.
+// intersection observer in `TransactionList`. Mirrors `SummaryView`'s fetch effect in
+// spirit, but `loadMore` lives outside the effect (it fires from an intersection
+// observer callback, not a render), so a plain effect-local `ignore` flag can't reach
+// it. `generationRef` is the shared version of that flag: every run of the effect below
+// bumps it, and `loadMore` captures the value at the moment it was called so a response
+// that settles after the filters have already moved on — whether it's the effect's own
+// fetch or a `loadMore` page — is recognised as stale and discarded rather than applied
+// to whatever list replaced it. `loadingMoreRef` is a second, narrower guard: a ref
+// rather than the `loading` state because two `loadMore` calls made back to back (the
+// observer firing twice before either request settles) read the same closure before
+// either state update has committed, so only a synchronously-set ref catches the second
+// one before it starts a duplicate request for the same cursor.
+//
+// `filters.dimension` is an object a caller may recreate every render even when its
+// contents haven't changed, so the effect depends on its serialised form rather than its
+// identity — the effect body still reads the live `filters` value, which is correct
+// because the closure that runs is always the one from the render that last actually
+// changed `dimensionKey`.
 export function useTransactions(client: ListTransactions, filters: HistoryFilters): UseTransactions {
   const [items, setItems] = useState<ApiTransaction[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
@@ -59,31 +70,32 @@ export function useTransactions(client: ListTransactions, filters: HistoryFilter
   const [error, setError] = useState(false)
   const [reloadToken, setReloadToken] = useState(0)
 
+  const generationRef = useRef(0)
+  const loadingMoreRef = useRef(false)
+
   const dimensionKey = JSON.stringify(filters.dimension ?? {})
 
   useEffect(() => {
-    let ignore = false
+    generationRef.current += 1
+    const generation = generationRef.current
+
     setLoading(true)
     setError(false)
 
     client
       .listTransactions(buildParams(filters))
       .then((page) => {
-        if (ignore) return
+        if (generation !== generationRef.current) return
         setItems(page.data)
         setCursor(page.meta.next_cursor)
         setHasMore(page.meta.next_cursor !== null)
       })
       .catch(() => {
-        if (!ignore) setError(true)
+        if (generation === generationRef.current) setError(true)
       })
       .finally(() => {
-        if (!ignore) setLoading(false)
+        if (generation === generationRef.current) setLoading(false)
       })
-
-    return () => {
-      ignore = true
-    }
   }, [
     client,
     filters.from,
@@ -98,18 +110,23 @@ export function useTransactions(client: ListTransactions, filters: HistoryFilter
   ])
 
   async function loadMore(): Promise<void> {
-    if (!hasMore || cursor === null) return
+    if (!hasMore || cursor === null || loadingMoreRef.current) return
 
+    loadingMoreRef.current = true
+    const generation = generationRef.current
     setLoading(true)
+
     try {
       const page = await client.listTransactions(buildParams(filters, cursor))
+      if (generation !== generationRef.current) return
       setItems((current) => [...current, ...page.data])
       setCursor(page.meta.next_cursor)
       setHasMore(page.meta.next_cursor !== null)
     } catch {
-      setError(true)
+      if (generation === generationRef.current) setError(true)
     } finally {
-      setLoading(false)
+      loadingMoreRef.current = false
+      if (generation === generationRef.current) setLoading(false)
     }
   }
 

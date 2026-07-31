@@ -14,10 +14,10 @@ export type HistoryScreenProps = {
   client: ApiClient
   bootstrap: Bootstrap
   /**
-   * Accepted for parity with `ReportsScreen`/`EntryScreen` and because the History tab
-   * is naturally "whose ledger this is"; unused today because nothing here makes a
-   * permission decision from it — the API is the sole authority on what a given user
-   * may edit or delete (see `TransactionSheet`'s doc comment).
+   * Passed straight through to `TransactionSheet`, which mirrors
+   * `TransactionPolicy::update` (`canManageTransaction`) to decide whether edit/delete
+   * are offered for the selected row. The API remains the final authority on what a
+   * given user may actually change — this only decides what to offer.
    */
   user: ApiUser
 }
@@ -39,7 +39,7 @@ function applyDimensionChange(
 // The history list, its filters, and the edit/delete sheet for whichever row is
 // selected. `TransactionSheet` is mounted with `key={selected.id}` so opening a
 // different row never carries the previous row's in-progress edits into the new one.
-export function HistoryScreen({ client, bootstrap }: HistoryScreenProps) {
+export function HistoryScreen({ client, bootstrap, user }: HistoryScreenProps) {
   const period = usePeriod()
   const [categoryId, setCategoryId] = useState<number | undefined>(undefined)
   const [currency, setCurrency] = useState<string | undefined>(undefined)
@@ -94,6 +94,7 @@ export function HistoryScreen({ client, bootstrap }: HistoryScreenProps) {
           key={selected.id}
           transaction={selected}
           bootstrap={bootstrap}
+          user={user}
           client={client}
           onClose={() => setSelectedId(null)}
           onSaved={(updated) => {
