@@ -16,7 +16,10 @@ Route::post('auth/telegram', [TelegramAuthController::class, 'store'])
     ->middleware('throttle:20,1')
     ->name('auth.telegram');
 
-Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
+// A ceiling on the authenticated surface, since a signed-in caller is one person with a
+// phone and no legitimate reason to outrun it. The limiter keys on the authenticated user,
+// so a whole office behind one address is not rationed collectively.
+Route::middleware(['auth:sanctum', 'active', 'throttle:api'])->group(function (): void {
     Route::get('me', fn (Request $request) => UserResource::make(
         $request->user()->loadMissing(['department', 'managedDepartments'])
     ))->name('me');
@@ -41,5 +44,10 @@ Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
     Route::get('reports/summary', [ReportsController::class, 'summary'])->name('reports.summary');
     Route::get('reports/trend', [ReportsController::class, 'trend'])->name('reports.trend');
 
-    Route::get('exports/transactions', TransactionExportController::class)->name('exports.transactions');
+    // An export streams a whole scoped history in one request on a single worker server,
+    // which costs far more than any other route here, so it carries a tighter ceiling of
+    // its own on top of the group's.
+    Route::get('exports/transactions', TransactionExportController::class)
+        ->middleware('throttle:exports')
+        ->name('exports.transactions');
 });
