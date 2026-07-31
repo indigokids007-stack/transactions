@@ -2,8 +2,7 @@ import { useState } from 'react'
 import type { SessionState } from './auth/useSession'
 import type { ApiClient } from './api/client'
 import { EntryScreen } from './entry/EntryScreen'
-import { PeriodPicker } from './reports/PeriodPicker'
-import { SummaryView } from './reports/SummaryView'
+import { ReportsScreen } from './reports/ReportsScreen'
 import { usePeriod } from './reports/usePeriod'
 import { strings } from './strings'
 import { useTheme } from './telegram/useTheme'
@@ -78,15 +77,13 @@ export function App({ session, onRetry, client }: AppProps) {
             {item.id === 'add' && client ? (
               <EntryScreen bootstrap={session.bootstrap} client={client} active={tab === 'add'} />
             ) : item.id === 'reports' && client ? (
-              <>
-                <PeriodPicker period={period} />
-                <SummaryView
-                  client={client}
-                  period={period}
-                  exponents={session.bootstrap.currencies}
-                  dimensions={session.bootstrap.dimensions}
-                />
-              </>
+              <ReportsScreen
+                user={session.user}
+                client={client}
+                period={period}
+                exponents={session.bootstrap.currencies}
+                dimensions={session.bootstrap.dimensions}
+              />
             ) : (
               <PanelPlaceholder label={item.label} />
             )}

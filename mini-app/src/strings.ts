@@ -13,10 +13,6 @@ export const strings = {
     add: 'Kiritish',
     reports: 'Hisobotlar',
     history: 'Tarix',
-    // Not a tab of its own: the staff comparison lives inside the Reports tab, gated by
-    // permission (see the design doc and Task 8). Kept here only because the shell's
-    // test asserts no tab ever carries this name, whatever the caller's permissions.
-    staff: 'Xodimlar',
   },
   common: {
     retry: 'Qaytadan urinish',
@@ -58,10 +54,9 @@ export const strings = {
     // stating plainly, not a blank rectangle the user has to interpret themselves.
     empty: "Bu davr uchun ma'lumot yo'q.",
     loadFailed: "Hisobotni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
-    // The report-view switch inside the Reports tab (Task 8). Distinct from
-    // `tabs.staff`: that one names a top-level tab that never exists, this one names a
-    // button that only exists inside the Reports panel, and only for a user who may see
-    // others' spend.
+    // The report-view switch inside the Reports tab (Task 8): buttons inside the
+    // Reports panel, not a second row of app-level tabs. `byStaff` only renders for a
+    // user who may see others' spend — see `ReportsScreen`'s permission gate.
     view: "Ko'rinish",
     bySummary: 'Umumiy',
     byTrend: 'Dinamika',

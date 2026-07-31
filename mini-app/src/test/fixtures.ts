@@ -110,3 +110,12 @@ export const activeSession: SessionState = {
   user: staffUser,
   bootstrap: bootstrapFixture,
 }
+
+// Same shape as `activeSession`, but with a user who may see other people's spend —
+// for the `App`-level tests proving the Reports tab actually offers the staff
+// comparison to someone permitted to see it (Task 8).
+export const managerSession: SessionState = {
+  kind: 'active',
+  user: managerUser,
+  bootstrap: bootstrapFixture,
+}

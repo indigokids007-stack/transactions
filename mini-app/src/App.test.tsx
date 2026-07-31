@@ -2,10 +2,20 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from './App'
 import { strings } from './strings'
-// Reused rather than redefined: `activeSession` and `pendingUser` already carry the
-// exact shapes this suite needs (staff permissions on the active user, a pending status
-// on the other), per Task 2's fixture kit.
-import { activeSession, pendingUser } from './test/fixtures'
+// Reused rather than redefined: `activeSession`, `managerSession` and `pendingUser`
+// already carry the exact shapes this suite needs (staff vs. manager permissions, a
+// pending status), per Task 2's/Task 8's fixture kit.
+import { activeSession, clientStub, managerSession, pendingUser } from './test/fixtures'
+import type { SummaryReport, TrendReport } from './api/types'
+
+const summaryReport: SummaryReport = {
+  totals: [{ currency: 'UZS', type: 'expense', amount_minor: 100, amount: '100', count: 1 }],
+  groups: [{ key: '7', label: 'Taksi', currency: 'UZS', type: 'expense', amount_minor: 100, amount: '100', count: 1 }],
+}
+
+const trendReport: TrendReport = {
+  points: [{ period: '2026-07-01', currency: 'UZS', type: 'expense', amount_minor: 100, amount: '100', count: 1 }],
+}
 
 it('shows the loading screen and no tabs', () => {
   render(<App session={{ kind: 'loading' }} />)
@@ -48,13 +58,47 @@ it('renders the three tabs for an active user', () => {
   expect(screen.getByRole('tab', { name: strings.tabs.history })).toBeInTheDocument()
 })
 
-// This only proves no tab is ever named `strings.tabs.staff` — it says nothing about
-// permission gating. The staff comparison itself lives inside the Reports tab, gated by
-// `permissions.can_see_all`/`can_manage`, and arrives with Task 8.
-it('hides the staff comparison for a user who cannot see others', () => {
-  render(<App session={activeSession} />)
+// The Reports tab renders `ReportsScreen` (Task 8), which owns its own view switch —
+// there is no app-level "staff" tab to query for; the switch lives inside the Reports
+// panel and is gated by `permissions.can_see_all`/`can_manage`. This is the end-to-end
+// proof that a manager can actually open the trend and staff views a person can reach,
+// not just that the underlying components exist in isolation.
+it('lets a manager reach the trend and staff comparison through the Reports tab', async () => {
+  const user = userEvent.setup()
+  const client = clientStub({
+    summary: vi.fn().mockResolvedValue(summaryReport),
+    trend: vi.fn().mockResolvedValue(trendReport),
+  })
+  render(<App session={managerSession} client={client} />)
 
-  expect(screen.queryByRole('tab', { name: strings.tabs.staff })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('tab', { name: strings.tabs.reports }))
+  await screen.findByTestId('currency-UZS')
+
+  await user.click(screen.getByRole('button', { name: strings.reports.byTrend }))
+  expect(await screen.findByTestId('trend-UZS')).toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: strings.reports.byStaff }))
+  expect(await screen.findAllByTestId('staff-row')).not.toHaveLength(0)
+})
+
+// The other half of the same proof: a plain staff member reaches the trend view (no
+// permission needed) through the very same tab, but the staff comparison is not just
+// hidden — the switch button for it never renders at all.
+it('lets a staff member reach the trend view but never the staff comparison', async () => {
+  const user = userEvent.setup()
+  const client = clientStub({
+    summary: vi.fn().mockResolvedValue(summaryReport),
+    trend: vi.fn().mockResolvedValue(trendReport),
+  })
+  render(<App session={activeSession} client={client} />)
+
+  await user.click(screen.getByRole('tab', { name: strings.tabs.reports }))
+  await screen.findByTestId('currency-UZS')
+
+  expect(screen.queryByRole('button', { name: strings.reports.byStaff })).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: strings.reports.byTrend }))
+  expect(await screen.findByTestId('trend-UZS')).toBeInTheDocument()
 })
 
 it('has an aria-controls target that resolves to an element in the document, for every tab', () => {
