@@ -20,7 +20,7 @@ const report: SummaryReport = {
 }
 
 it('renders one section per currency and never merges their totals', async () => {
-  render(<SummaryView client={clientReturning(report)} period={period} exponents={{ UZS: 0, USD: 2 }} />)
+  render(<SummaryView client={clientReturning(report)} period={period} />)
 
   const uzs = await screen.findByTestId('currency-UZS')
   const usd = await screen.findByTestId('currency-USD')
@@ -46,7 +46,6 @@ it('draws each currency chart from its own group rows, not the other currency\'s
     <SummaryView
       client={clientReturning(report)}
       period={period}
-      exponents={{ UZS: 0, USD: 2 }}
       chartWidth={320}
       chartHeight={240}
     />,
@@ -70,7 +69,6 @@ it('asks the api to group by a dimension when one is chosen', async () => {
     <SummaryView
       client={client}
       period={period}
-      exponents={{ UZS: 0 }}
       dimensions={[{ id: 3, key: 'branch', name: 'Filial', is_required: false, values: [] }]}
     />,
   )
@@ -82,20 +80,42 @@ it('asks the api to group by a dimension when one is chosen', async () => {
   )
 })
 
+// The review's exact scenario: ten maximal transactions (1e15 minor units, the backend's
+// per-transaction cap) plus one more minor unit sums to 10000000000000001 — one past
+// Number.MAX_SAFE_INTEGER (2^53 - 1). This fixture's `amount_minor` is deliberately the
+// value `JSON.parse` would have rounded that sum down to, standing in for what a real
+// network response already looks like by the time it reaches this component; `amount`
+// carries the true figure as the backend's precision-safe string. If `CurrencySection`
+// ever went back to formatting `amount_minor` instead, this total would render the wrong,
+// rounded figure.
+it('renders a total above Number.MAX_SAFE_INTEGER exactly, from the string amount, not amount_minor', async () => {
+  const bigReport: SummaryReport = {
+    totals: [
+      { currency: 'UZS', type: 'expense', amount_minor: 10000000000000000, amount: '10000000000000001', count: 11 },
+    ],
+    groups: [],
+  }
+  render(<SummaryView client={clientReturning(bigReport)} period={period} />)
+
+  const uzs = await screen.findByTestId('currency-UZS')
+  expect(within(uzs).getByText(/10 000 000 000 000 001/)).toBeInTheDocument()
+  expect(within(uzs).queryByText(/10 000 000 000 000 000\b/)).not.toBeInTheDocument()
+})
+
 it('says there is nothing rather than drawing an empty chart', async () => {
-  render(<SummaryView client={clientReturning({ totals: [], groups: [] })} period={period} exponents={{}} />)
+  render(<SummaryView client={clientReturning({ totals: [], groups: [] })} period={period} />)
 
   expect(await screen.findByText(strings.reports.empty)).toBeInTheDocument()
 })
 
 it('refetches when the period changes', async () => {
   const client = clientReturning(report)
-  const { rerender } = render(<SummaryView client={client} period={period} exponents={{ UZS: 0, USD: 2 }} />)
+  const { rerender } = render(<SummaryView client={client} period={period} />)
 
   await screen.findByTestId('currency-UZS')
 
   const nextPeriod = { from: '2026-08-01', to: '2026-08-31' }
-  rerender(<SummaryView client={client} period={nextPeriod} exponents={{ UZS: 0, USD: 2 }} />)
+  rerender(<SummaryView client={client} period={nextPeriod} />)
 
   await waitFor(() =>
     expect(client.summary).toHaveBeenLastCalledWith(expect.objectContaining(nextPeriod)),
@@ -117,8 +137,8 @@ it('does not let a stale period response overwrite a newer one', async () => {
   const periodA = { from: '2026-07-01', to: '2026-07-31' }
   const periodB = { from: '2026-08-01', to: '2026-08-31' }
 
-  const { rerender } = render(<SummaryView client={client} period={periodA} exponents={{ UZS: 0 }} />)
-  rerender(<SummaryView client={client} period={periodB} exponents={{ UZS: 0 }} />)
+  const { rerender } = render(<SummaryView client={client} period={periodA} />)
+  rerender(<SummaryView client={client} period={periodB} />)
 
   await waitFor(() => expect(resolvers).toHaveLength(2))
 

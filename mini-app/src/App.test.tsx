@@ -24,6 +24,13 @@ it('shows the loading screen and no tabs', () => {
   expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
 })
 
+it('shows a plain message and no tabs when the app was opened outside Telegram', () => {
+  render(<App session={{ kind: 'no-telegram' }} />)
+
+  expect(screen.getByText(strings.session.noTelegram)).toBeInTheDocument()
+  expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+})
+
 it('shows the waiting screen for a pending user and no tabs', () => {
   render(<App session={{ kind: 'pending', user: pendingUser }} />)
 

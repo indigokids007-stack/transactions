@@ -9,6 +9,10 @@ export type SessionState =
   | { kind: 'pending'; user: ApiUser }
   | { kind: 'refused'; message: string }
   | { kind: 'error'; message: string }
+  // Telegram handed the app no `initData` at all — opened in a plain browser tab, not
+  // inside Telegram. Posting that empty string to the exchange would only ever earn a
+  // 401, so this state is set instead of ever making the call. See `App.tsx`.
+  | { kind: 'no-telegram' }
 
 // Only the three calls the exchange needs, so a test double can implement this instead
 // of the full `ApiClient`.
@@ -45,6 +49,15 @@ export function useSession(
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
+    // No `initData` means Telegram never launched this page — a bare browser tab, most
+    // likely. `client.authenticate('')` would only ever come back a 401, so this skips
+    // the network round trip entirely and reports the real cause instead of a generic
+    // error.
+    if (initData === '') {
+      setState({ kind: 'no-telegram' })
+      return
+    }
+
     let ignore = false
     setState({ kind: 'loading' })
 

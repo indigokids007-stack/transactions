@@ -42,6 +42,11 @@ export function App({ session, onRetry, client }: AppProps) {
     return <EmptyState message={strings.session.loading} />
   }
 
+  if (session.kind === 'no-telegram') {
+    return <EmptyState message={strings.session.noTelegram} />
+  }
+
+
   if (session.kind === 'pending') {
     return <EmptyState message={strings.session.pending} />
   }
@@ -82,7 +87,6 @@ export function App({ session, onRetry, client }: AppProps) {
                 user={session.user}
                 client={client}
                 period={period}
-                exponents={session.bootstrap.currencies}
                 dimensions={session.bootstrap.dimensions}
               />
             ) : item.id === 'history' && client ? (

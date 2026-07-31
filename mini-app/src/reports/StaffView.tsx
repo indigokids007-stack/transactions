@@ -11,7 +11,6 @@ import type { PeriodRange } from './usePeriod'
 export type StaffViewProps = {
   client: ApiClient
   period: PeriodRange
-  exponents: Record<string, number>
 }
 
 type CurrencyRanking = {
@@ -44,7 +43,7 @@ function rankByCurrency(report: SummaryReport): CurrencyRanking[] {
 // genuine effect; splitting by currency and ranking within it happens at render time.
 // The permission check for whether this view should even be reachable lives in
 // `ReportsScreen`, not here — see that file's doc comment for why.
-export function StaffView({ client, period, exponents }: StaffViewProps) {
+export function StaffView({ client, period }: StaffViewProps) {
   const [report, setReport] = useState<SummaryReport | null>(null)
   const [failed, setFailed] = useState(false)
 
@@ -79,7 +78,7 @@ export function StaffView({ client, period, exponents }: StaffViewProps) {
   return (
     <div className="flex flex-col gap-4 p-4">
       {rankings.map((ranking) => (
-        <StaffSection key={ranking.currency} currency={ranking.currency} rows={ranking.rows} exponents={exponents} />
+        <StaffSection key={ranking.currency} currency={ranking.currency} rows={ranking.rows} />
       ))}
     </div>
   )

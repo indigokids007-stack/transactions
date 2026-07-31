@@ -12,7 +12,6 @@ export type ReportsScreenProps = {
   user: ApiUser
   client: ApiClient
   period: Period
-  exponents: Record<string, number>
   dimensions?: ApiDimension[]
 }
 
@@ -39,7 +38,7 @@ function canSeeStaffComparison(user: ApiUser): boolean {
 // staff comparison. Holds the active view as its own state, entirely separate from
 // `strings.tabs`: the switch below is a set of buttons inside the Reports panel, not a
 // second row of app-level tabs.
-export function ReportsScreen({ user, client, period, exponents, dimensions = [] }: ReportsScreenProps) {
+export function ReportsScreen({ user, client, period, dimensions = [] }: ReportsScreenProps) {
   const canSeeStaff = canSeeStaffComparison(user)
   const views = canSeeStaff ? [...BASE_VIEWS, { id: 'staff' as const, label: strings.reports.byStaff }] : BASE_VIEWS
 
@@ -67,11 +66,9 @@ export function ReportsScreen({ user, client, period, exponents, dimensions = []
         ))}
       </div>
 
-      {view === 'summary' && (
-        <SummaryView client={client} period={period} exponents={exponents} dimensions={dimensions} />
-      )}
-      {view === 'trend' && <TrendView client={client} period={period} exponents={exponents} />}
-      {view === 'staff' && canSeeStaff && <StaffView client={client} period={period} exponents={exponents} />}
+      {view === 'summary' && <SummaryView client={client} period={period} dimensions={dimensions} />}
+      {view === 'trend' && <TrendView client={client} period={period} />}
+      {view === 'staff' && canSeeStaff && <StaffView client={client} period={period} />}
     </div>
   )
 }

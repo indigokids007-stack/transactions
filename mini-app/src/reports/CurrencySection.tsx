@@ -1,5 +1,5 @@
 import { Legend, Pie, PieChart, ResponsiveContainer } from 'recharts'
-import { Money } from '../ui/Money'
+import { MoneyAmount } from '../ui/Money'
 import { strings } from '../strings'
 import type { AggregateRow } from '../api/types'
 
@@ -9,7 +9,6 @@ export type CurrencySectionProps = {
   currency: string
   totals: AggregateRow[]
   groups: GroupRow[]
-  exponents: Record<string, number>
   /**
    * Fixed pixel dimensions for the chart. Recharts' `ResponsiveContainer` measures its
    * parent via `ResizeObserver`, which jsdom never fires, so a percentage width renders
@@ -25,7 +24,7 @@ export type CurrencySectionProps = {
 // receives another currency's rows, and never combines with one — the caller
 // (`SummaryView`) is the only place currencies are split apart, and this component has
 // no way to add two of them back together.
-export function CurrencySection({ currency, totals, groups, exponents, chartWidth, chartHeight }: CurrencySectionProps) {
+export function CurrencySection({ currency, totals, groups, chartWidth, chartHeight }: CurrencySectionProps) {
   return (
     <section data-testid={`currency-${currency}`} className="rounded-lg border p-3" style={{ borderColor: 'var(--tg-hint)' }}>
       <h3 className="text-sm font-semibold">{currency}</h3>
@@ -35,7 +34,10 @@ export function CurrencySection({ currency, totals, groups, exponents, chartWidt
           <div key={row.type}>
             <dt className="opacity-70">{strings.entry[row.type]}</dt>
             <dd>
-              <Money minor={row.amount_minor} currency={row.currency} exponents={exponents} />
+              {/* `row.amount` is the backend's precision-safe decimal string; `row.amount_minor`
+                  is the same figure as a JSON number, which loses precision above 2^53 once
+                  enough transactions are summed into one aggregate row. See `MoneyAmount`. */}
+              <MoneyAmount amount={row.amount} currency={row.currency} />
             </dd>
           </div>
         ))}

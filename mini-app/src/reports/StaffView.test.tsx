@@ -15,7 +15,7 @@ const report: SummaryReport = {
 }
 
 it('ranks people by spend within a currency', async () => {
-  render(<StaffView client={clientReturning(report)} period={period} exponents={{ UZS: 0 }} />)
+  render(<StaffView client={clientReturning(report)} period={period} />)
 
   const rows = await screen.findAllByTestId('staff-row')
   expect(rows[0]).toHaveTextContent('Bekzod')
@@ -24,7 +24,7 @@ it('ranks people by spend within a currency', async () => {
 
 it('calls the api grouped by user, not by category', async () => {
   const client = clientReturning(report)
-  render(<StaffView client={client} period={period} exponents={{ UZS: 0 }} />)
+  render(<StaffView client={client} period={period} />)
 
   await waitFor(() => expect(client.summary).toHaveBeenCalledWith(
     expect.objectContaining({ from: period.from, to: period.to, group_by: 'user' }),
@@ -32,9 +32,28 @@ it('calls the api grouped by user, not by category', async () => {
 })
 
 it('says there is nothing for an empty period', async () => {
-  render(<StaffView client={clientReturning({ totals: [], groups: [] })} period={period} exponents={{}} />)
+  render(<StaffView client={clientReturning({ totals: [], groups: [] })} period={period} />)
 
   expect(await screen.findByText(strings.reports.empty)).toBeInTheDocument()
+})
+
+// The review's exact scenario, mirroring `SummaryView`'s equivalent test: `amount_minor`
+// here is deliberately the value `JSON.parse` would round a too-large sum down to, standing
+// in for what a real response already looks like on arrival; `amount` carries the true
+// figure. If `StaffSection` ever went back to formatting `amount_minor`, this ranking would
+// show the wrong, rounded figure.
+it('renders a ranked amount above Number.MAX_SAFE_INTEGER exactly, from the string amount', async () => {
+  const bigReport: SummaryReport = {
+    totals: [],
+    groups: [
+      { key: '2', label: 'Alisher', currency: 'UZS', type: 'expense', amount_minor: 10000000000000000, amount: '10000000000000001', count: 11 },
+    ],
+  }
+  render(<StaffView client={clientReturning(bigReport)} period={period} />)
+
+  const row = await screen.findByTestId('staff-row')
+  expect(within(row).getByText(/10 000 000 000 000 001/)).toBeInTheDocument()
+  expect(within(row).queryByText(/10 000 000 000 000 000\b/)).not.toBeInTheDocument()
 })
 
 // The race the brief names by name, mirroring `SummaryView`/`TrendView`'s equivalent
@@ -51,8 +70,8 @@ it('does not let a stale period response overwrite a newer one', async () => {
   const periodA = { from: '2026-07-01', to: '2026-07-31' }
   const periodB = { from: '2026-08-01', to: '2026-08-31' }
 
-  const { rerender } = render(<StaffView client={client} period={periodA} exponents={{ UZS: 0 }} />)
-  rerender(<StaffView client={client} period={periodB} exponents={{ UZS: 0 }} />)
+  const { rerender } = render(<StaffView client={client} period={periodA} />)
+  rerender(<StaffView client={client} period={periodB} />)
 
   await waitFor(() => expect(resolvers).toHaveLength(2))
 
@@ -98,7 +117,7 @@ it("never lets one currency's ranking absorb another currency's rows", async () 
     ],
   }
 
-  render(<StaffView client={clientReturning(mixedReport)} period={period} exponents={{ UZS: 0, USD: 2 }} />)
+  render(<StaffView client={clientReturning(mixedReport)} period={period} />)
 
   const uzs = await screen.findByTestId('staff-UZS')
   const usd = await screen.findByTestId('staff-USD')

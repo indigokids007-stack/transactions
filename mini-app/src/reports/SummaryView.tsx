@@ -10,7 +10,6 @@ import type { PeriodRange } from './usePeriod'
 export type SummaryViewProps = {
   client: ApiClient
   period: PeriodRange
-  exponents: Record<string, number>
   /** Every active dimension the group-by switch should offer, alongside category. */
   dimensions?: ApiDimension[]
   /** Forwarded to `CurrencySection` — see its own doc comment. Only ever set in tests. */
@@ -46,7 +45,7 @@ function groupByValue(dimensionKey: string): string {
 // so there is nothing here that could sum across them even by accident. Fetching is the
 // one genuine effect: everything else (splitting the response by currency) is derived at
 // render time.
-export function SummaryView({ client, period, exponents, dimensions = [], chartWidth, chartHeight }: SummaryViewProps) {
+export function SummaryView({ client, period, dimensions = [], chartWidth, chartHeight }: SummaryViewProps) {
   const [groupBy, setGroupBy] = useState('category')
   const [report, setReport] = useState<SummaryReport | null>(null)
   const [failed, setFailed] = useState(false)
@@ -107,7 +106,6 @@ export function SummaryView({ client, period, exponents, dimensions = [], chartW
           currency={bucket.currency}
           totals={bucket.totals}
           groups={bucket.groups}
-          exponents={exponents}
           chartWidth={chartWidth}
           chartHeight={chartHeight}
         />

@@ -26,7 +26,6 @@ const trend: TrendReport = {
 const rest = {
   client: clientStub({ summary: vi.fn().mockResolvedValue(summary), trend: vi.fn().mockResolvedValue(trend) }),
   period,
-  exponents: { UZS: 0 },
   dimensions: [],
 }
 
@@ -52,7 +51,7 @@ it('shows the summary view by default', async () => {
     summary: vi.fn().mockResolvedValue(summary),
     trend: vi.fn().mockResolvedValue(trend),
   })
-  render(<ReportsScreen user={managerUser} client={client} period={period} exponents={{ UZS: 0 }} />)
+  render(<ReportsScreen user={managerUser} client={client} period={period} />)
 
   expect(await screen.findByTestId('currency-UZS')).toBeInTheDocument()
   expect(screen.queryByTestId('trend-UZS')).not.toBeInTheDocument()
@@ -63,7 +62,7 @@ it('switches to the trend view on click and back', async () => {
     summary: vi.fn().mockResolvedValue(summary),
     trend: vi.fn().mockResolvedValue(trend),
   })
-  render(<ReportsScreen user={managerUser} client={client} period={period} exponents={{ UZS: 0 }} />)
+  render(<ReportsScreen user={managerUser} client={client} period={period} />)
 
   await screen.findByTestId('currency-UZS')
   await userEvent.click(screen.getByRole('button', { name: strings.reports.byTrend }))
@@ -82,7 +81,7 @@ it('switches to the staff comparison for a manager', async () => {
     summary: vi.fn().mockResolvedValue(summary),
     trend: vi.fn().mockResolvedValue(trend),
   })
-  render(<ReportsScreen user={managerUser} client={client} period={period} exponents={{ UZS: 0 }} />)
+  render(<ReportsScreen user={managerUser} client={client} period={period} />)
 
   await screen.findByTestId('currency-UZS')
   await userEvent.click(screen.getByRole('button', { name: strings.reports.byStaff }))
@@ -99,7 +98,7 @@ it('never fetches the staff comparison for a user who cannot see others', async 
     summary: vi.fn().mockResolvedValue(summary),
     trend: vi.fn().mockResolvedValue(trend),
   })
-  render(<ReportsScreen user={staffUser} client={client} period={period} exponents={{ UZS: 0 }} />)
+  render(<ReportsScreen user={staffUser} client={client} period={period} />)
 
   await screen.findByTestId('currency-UZS')
 

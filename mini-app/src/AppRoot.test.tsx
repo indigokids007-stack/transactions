@@ -20,6 +20,37 @@ vi.mock('./api/client', () => ({
   })),
 }))
 
+// Without this, `webApp().initData` would be the empty-string stub (no `window.Telegram`
+// in jsdom), and `useSession` now skips the exchange entirely for an empty `initData` —
+// this suite is about call counts across re-renders, not that state, so it needs a
+// non-empty value to reach the exchange at all. The rest of the shape mirrors the real
+// stub (see `telegram/webApp.ts`) so `useTheme`'s effect, which also runs here, has
+// everything it reads.
+vi.mock('./telegram/webApp', () => ({
+  webApp: vi.fn(() => ({
+    initData: 'test-init-data',
+    colorScheme: 'light',
+    themeParams: {},
+    MainButton: {
+      text: '',
+      isVisible: false,
+      isActive: true,
+      setText: vi.fn(),
+      show: vi.fn(),
+      hide: vi.fn(),
+      enable: vi.fn(),
+      disable: vi.fn(),
+      onClick: vi.fn(),
+      offClick: vi.fn(),
+    },
+    ready: vi.fn(),
+    expand: vi.fn(),
+    close: vi.fn(),
+    onEvent: vi.fn(),
+    offEvent: vi.fn(),
+  })),
+}))
+
 const createClientMock = vi.mocked(createClient)
 
 // Forces `AppRoot` to re-render several times without remounting it, the way a real

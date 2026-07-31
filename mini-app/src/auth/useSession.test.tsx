@@ -101,6 +101,19 @@ it('discards a stale exchange if initData changes before it resolves', async () 
   expect(client.setToken).not.toHaveBeenCalled()
 })
 
+it('reports a no-telegram state and never calls authenticate when initData is empty', async () => {
+  const client = {
+    authenticate: vi.fn(),
+    setToken: vi.fn(),
+    bootstrap: vi.fn(),
+  }
+
+  const { result } = renderHook(() => useSession(client, ''))
+
+  await waitFor(() => expect(result.current.state.kind).toBe('no-telegram'))
+  expect(client.authenticate).not.toHaveBeenCalled()
+})
+
 it('retries the exchange when asked to', async () => {
   const client = {
     authenticate: vi

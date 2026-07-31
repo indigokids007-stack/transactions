@@ -12,7 +12,6 @@ export type TrendInterval = 'day' | 'week' | 'month'
 export type TrendViewProps = {
   client: ApiClient
   period: PeriodRange
-  exponents: Record<string, number>
   /** Forwarded to `TrendSection` — see its own doc comment. Only ever set in tests. */
   chartWidth?: number
   chartHeight?: number
@@ -44,7 +43,17 @@ function trendByCurrency(report: TrendReport): CurrencyTrend[] {
       rows
         .filter((row) => row.period === period)
         .forEach((row) => {
-          point[row.type] = row.amount_minor
+          // Branched rather than a computed `point[row.type] = ...` so both the bar's
+          // number and its label's exact string land on the matching pair of keys —
+          // `income`/`incomeAmount` or `expense`/`expenseAmount` — without an `any`-typed
+          // dynamic key.
+          if (row.type === 'income') {
+            point.income = row.amount_minor
+            point.incomeAmount = row.amount
+          } else {
+            point.expense = row.amount_minor
+            point.expenseAmount = row.amount
+          }
         })
       return point
     })
@@ -58,7 +67,7 @@ function trendByCurrency(report: TrendReport): CurrencyTrend[] {
 // alone an accumulator, so nothing here could sum across them even by accident. Fetching
 // is the one genuine effect: splitting the response by currency and reshaping it into a
 // per-period series happens at render time.
-export function TrendView({ client, period, exponents, chartWidth, chartHeight }: TrendViewProps) {
+export function TrendView({ client, period, chartWidth, chartHeight }: TrendViewProps) {
   const [interval, setIntervalValue] = useState<TrendInterval>('day')
   const [report, setReport] = useState<TrendReport | null>(null)
   const [failed, setFailed] = useState(false)
@@ -117,7 +126,6 @@ export function TrendView({ client, period, exponents, chartWidth, chartHeight }
           key={bucket.currency}
           currency={bucket.currency}
           series={bucket.series}
-          exponents={exponents}
           chartWidth={chartWidth}
           chartHeight={chartHeight}
         />

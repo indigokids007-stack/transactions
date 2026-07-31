@@ -8,6 +8,9 @@ export const strings = {
     pending: "Siz hali ro'yxatdan o'tmagansiz. Administrator tasdiqlashini kuting.",
     refusedFallback: 'Kirish rad etildi.',
     errorFallback: "Nimadir xato ketdi. Qaytadan urinib ko'ring.",
+    // Shown when Telegram never handed the app any `initData` — a plain browser tab, not
+    // the Telegram client. There is nothing to authenticate and nothing a retry would fix.
+    noTelegram: "Bu ilova faqat Telegram orqali ochiladi.",
   },
   tabs: {
     add: 'Kiritish',
