@@ -58,5 +58,13 @@ export const strings = {
     // stating plainly, not a blank rectangle the user has to interpret themselves.
     empty: "Bu davr uchun ma'lumot yo'q.",
     loadFailed: "Hisobotni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
+    // The report-view switch inside the Reports tab (Task 8). Distinct from
+    // `tabs.staff`: that one names a top-level tab that never exists, this one names a
+    // button that only exists inside the Reports panel, and only for a user who may see
+    // others' spend.
+    view: "Ko'rinish",
+    bySummary: 'Umumiy',
+    byTrend: 'Dinamika',
+    byStaff: 'Xodimlar',
   },
 } as const
