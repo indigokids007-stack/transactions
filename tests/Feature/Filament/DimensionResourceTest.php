@@ -8,6 +8,7 @@ use App\Filament\Resources\DimensionResource\Pages\ListDimensions;
 use App\Filament\Resources\DimensionResource\RelationManagers\ValuesRelationManager;
 use App\Models\Dimension;
 use App\Models\DimensionValue;
+use App\Models\Transaction;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -120,4 +121,55 @@ it('hides dimension value mutations from an owner and refuses them even mounted 
         ->callMountedTableAction();
 
     expect($dimension->values()->where('name', 'Owner Attempt')->exists())->toBeFalse();
+});
+
+/**
+ * Deleting a dimension used to remove the pivot row that recorded the choice from every
+ * transaction that had one, with no revision written and nothing left to reconstruct it
+ * from. The database refuses now; the panel refuses first and explains.
+ */
+it('refuses to delete a dimension a transaction recorded a value for', function () {
+    $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
+    $dimension = Dimension::factory()->create();
+    $value = DimensionValue::factory()->for($dimension)->create();
+    $transaction = Transaction::factory()->create();
+    $transaction->syncDimensionValues([$dimension->id => $value->id]);
+
+    Livewire::test(ListDimensions::class)
+        ->callTableAction('delete', $dimension)
+        ->assertNotified(__('filament.delete_refused.title'));
+
+    expect(Dimension::whereKey($dimension->id)->exists())->toBeTrue()
+        ->and($transaction->fresh()->dimensionValues)->toHaveCount(1);
+});
+
+it('refuses to delete a dimension value a transaction recorded', function () {
+    $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
+    $dimension = Dimension::factory()->create();
+    $value = DimensionValue::factory()->for($dimension)->create();
+    $transaction = Transaction::factory()->create();
+    $transaction->syncDimensionValues([$dimension->id => $value->id]);
+
+    Livewire::test(ValuesRelationManager::class, [
+        'ownerRecord' => $dimension,
+        'pageClass' => EditDimension::class,
+    ])
+        ->callTableAction('delete', $value)
+        ->assertNotified(__('filament.delete_refused.title'));
+
+    expect(DimensionValue::whereKey($value->id)->exists())->toBeTrue()
+        ->and($transaction->fresh()->dimensionValues)->toHaveCount(1);
+});
+
+it('still deletes a dimension value no transaction has recorded', function () {
+    $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
+    $dimension = Dimension::factory()->create();
+    $value = DimensionValue::factory()->for($dimension)->create();
+
+    Livewire::test(ValuesRelationManager::class, [
+        'ownerRecord' => $dimension,
+        'pageClass' => EditDimension::class,
+    ])->callTableAction('delete', $value);
+
+    expect(DimensionValue::whereKey($value->id)->exists())->toBeFalse();
 });

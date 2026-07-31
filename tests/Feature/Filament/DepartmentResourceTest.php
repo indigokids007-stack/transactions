@@ -6,6 +6,7 @@ use App\Filament\Resources\DepartmentResource\Pages\CreateDepartment;
 use App\Filament\Resources\DepartmentResource\Pages\EditDepartment;
 use App\Filament\Resources\DepartmentResource\Pages\ListDepartments;
 use App\Models\Department;
+use App\Models\Transaction;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -117,4 +118,47 @@ it('lets a department carry a multi select of managers', function () {
     $department = Department::where('name', 'Xizmat')->sole();
 
     expect($department->managers->pluck('id')->all())->toBe([$manager->id]);
+});
+
+/**
+ * The database refuses these deletes outright. What is checked here is that the panel
+ * refuses first and says why, so an admin reads a sentence about deactivating instead of
+ * meeting a failed query.
+ */
+it('refuses to delete a department a transaction was charged to and says to deactivate it', function () {
+    $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
+    $department = Department::factory()->create();
+    Transaction::factory()->create(['department_id' => $department->id]);
+
+    Livewire::test(ListDepartments::class)
+        ->callTableAction('delete', $department)
+        ->assertNotified(__('filament.delete_refused.title'));
+
+    expect(Department::whereKey($department->id)->exists())->toBeTrue();
+});
+
+it('refuses the same delete from the edit page header', function () {
+    $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
+    $department = Department::factory()->create();
+    Transaction::factory()->create(['department_id' => $department->id]);
+
+    Livewire::test(EditDepartment::class, ['record' => $department->getKey()])
+        ->callAction('delete')
+        ->assertNotified(__('filament.delete_refused.title'));
+
+    expect(Department::whereKey($department->id)->exists())->toBeTrue();
+});
+
+it('refuses a bulk delete whole when one of the selected departments is in use', function () {
+    $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
+    $used = Department::factory()->create();
+    $unused = Department::factory()->create();
+    Transaction::factory()->create(['department_id' => $used->id]);
+
+    Livewire::test(ListDepartments::class)
+        ->callTableBulkAction('delete', [$used, $unused])
+        ->assertNotified(__('filament.delete_refused.title'));
+
+    expect(Department::whereKey($used->id)->exists())->toBeTrue()
+        ->and(Department::whereKey($unused->id)->exists())->toBeTrue();
 });

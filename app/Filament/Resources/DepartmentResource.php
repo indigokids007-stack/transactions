@@ -6,6 +6,7 @@ use App\Filament\Resources\Concerns\RestrictsMutationsToAdmin;
 use App\Filament\Resources\DepartmentResource\Pages\CreateDepartment;
 use App\Filament\Resources\DepartmentResource\Pages\EditDepartment;
 use App\Filament\Resources\DepartmentResource\Pages\ListDepartments;
+use App\Filament\Support\LedgerReferenceGuard;
 use App\Models\Department;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -21,6 +22,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 class DepartmentResource extends Resource
@@ -62,11 +64,15 @@ class DepartmentResource extends Resource
             ])
             ->recordActions([
                 EditAction::make()->visible(fn (Model $record): bool => static::canEdit($record)),
-                DeleteAction::make()->visible(fn (Model $record): bool => static::canDelete($record)),
+                DeleteAction::make()
+                    ->visible(fn (Model $record): bool => static::canDelete($record))
+                    ->before(fn (DeleteAction $action, Model $record) => LedgerReferenceGuard::one($action, $record)),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()->visible(fn (): bool => static::canDeleteAny()),
+                    DeleteBulkAction::make()
+                        ->visible(fn (): bool => static::canDeleteAny())
+                        ->before(fn (DeleteBulkAction $action, Collection $records) => LedgerReferenceGuard::many($action, $records)),
                 ]),
             ]);
     }

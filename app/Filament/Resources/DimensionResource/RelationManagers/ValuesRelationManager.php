@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\DimensionResource\RelationManagers;
 
+use App\Filament\Support\LedgerReferenceGuard;
 use App\Filament\Support\PanelUser;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
@@ -15,6 +16,8 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 
 class ValuesRelationManager extends RelationManager
 {
@@ -53,11 +56,15 @@ class ValuesRelationManager extends RelationManager
             ])
             ->recordActions([
                 EditAction::make()->visible(fn (): bool => PanelUser::isAdmin()),
-                DeleteAction::make()->visible(fn (): bool => PanelUser::isAdmin()),
+                DeleteAction::make()
+                    ->visible(fn (): bool => PanelUser::isAdmin())
+                    ->before(fn (DeleteAction $action, Model $record) => LedgerReferenceGuard::one($action, $record)),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()->visible(fn (): bool => PanelUser::isAdmin()),
+                    DeleteBulkAction::make()
+                        ->visible(fn (): bool => PanelUser::isAdmin())
+                        ->before(fn (DeleteBulkAction $action, Collection $records) => LedgerReferenceGuard::many($action, $records)),
                 ]),
             ]);
     }

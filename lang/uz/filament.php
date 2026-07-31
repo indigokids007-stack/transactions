@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'delete_refused' => [
+        'title' => 'Oʻchirish mumkin emas',
+        'body' => 'Bu yozuv saqlangan tranzaksiyalarda ishlatilgan, shuning uchun uni oʻchirib boʻlmaydi. Oʻrniga uni faolsiz qilib qoʻying.',
+    ],
     'dimension' => [
         'is_required_help' => 'Har bir majburiy oʻlcham botga bitta bosishni qoʻshadi, shuning uchun faqat chindan zarur boʻlganlarini belgilang.',
     ],

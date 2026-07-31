@@ -7,6 +7,7 @@ use App\Filament\Resources\DimensionResource\Pages\CreateDimension;
 use App\Filament\Resources\DimensionResource\Pages\EditDimension;
 use App\Filament\Resources\DimensionResource\Pages\ListDimensions;
 use App\Filament\Resources\DimensionResource\RelationManagers\ValuesRelationManager;
+use App\Filament\Support\LedgerReferenceGuard;
 use App\Models\Dimension;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -21,6 +22,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 class DimensionResource extends Resource
@@ -77,11 +79,15 @@ class DimensionResource extends Resource
             ->defaultSort('sort')
             ->recordActions([
                 EditAction::make()->visible(fn (Model $record): bool => static::canEdit($record)),
-                DeleteAction::make()->visible(fn (Model $record): bool => static::canDelete($record)),
+                DeleteAction::make()
+                    ->visible(fn (Model $record): bool => static::canDelete($record))
+                    ->before(fn (DeleteAction $action, Model $record) => LedgerReferenceGuard::one($action, $record)),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()->visible(fn (): bool => static::canDeleteAny()),
+                    DeleteBulkAction::make()
+                        ->visible(fn (): bool => static::canDeleteAny())
+                        ->before(fn (DeleteBulkAction $action, Collection $records) => LedgerReferenceGuard::many($action, $records)),
                 ]),
             ]);
     }
