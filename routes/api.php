@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\BootstrapController;
+use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\ReportsController;
 use App\Http\Controllers\Api\TelegramAuthController;
 use App\Http\Controllers\Api\TransactionExportController;
@@ -9,7 +10,7 @@ use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('health', fn () => ['status' => 'ok'])->name('health');
+Route::get('health', HealthController::class)->name('health');
 
 Route::post('auth/telegram', [TelegramAuthController::class, 'store'])
     ->middleware('throttle:20,1')

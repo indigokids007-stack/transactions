@@ -2,6 +2,7 @@ services:
   app:
     build: .
     container_name: transactions-app
+    restart: unless-stopped
     volumes:
       - .:/app
     ports:
@@ -9,17 +10,35 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      DB_CONNECTION: pgsql
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_DATABASE: transactions
-      DB_USERNAME: transactions
-      DB_PASSWORD: secret
+    healthcheck:
+      # A database backed route, deliberately: `php artisan serve` reads the database
+      # settings from `.env` and not from this file, so a check that only proves PHP is
+      # answering would stay green while every real route returned 500.
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/api/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 180s
+
+  scheduler:
+    build: .
+    container_name: transactions-scheduler
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      # Waiting for the app lets it own the first `composer install` and migration
+      # instead of the two containers racing each other through the same entrypoint.
+      app:
+        condition: service_healthy
 
   db:
     image: postgres:17-alpine
     container_name: transactions-db
+    restart: unless-stopped
     environment:
       POSTGRES_DB: transactions
       POSTGRES_USER: transactions

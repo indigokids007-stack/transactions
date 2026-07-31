@@ -4,13 +4,27 @@ Cara staff record their expenses and incomes through a Telegram bot or mini app,
 
 ## Running locally
 
+A clean clone needs nothing but Docker and these commands:
+
 ```bash
-make up       # build and start the app and database containers
-make migrate  # run database migrations
+make up       # build and start every container, then wait until the app is healthy
+make smoke    # ask the running app for a few pages over HTTP and check they answer
 make test     # run the Pest test suite
 make analyze  # run PHPStan (Larastan) at level 6
 make pint     # check and fix code style
 ```
+
+`make up` is the whole setup. The app container's entrypoint (`docker/app/entrypoint.sh`) creates `.env` from `.env.example` when it is missing, runs `composer install` when `vendor/` is empty, generates the application key when it is blank, and runs migrations. The first run takes a few minutes because of `composer install`; later runs skip every step that is already done. `make up` then blocks until the app container reports healthy, so when it returns the application really is serving.
+
+Three services come up: `app` (the HTTP server), `db` (PostgreSQL 17) and `scheduler` (`php artisan schedule:work`, which is what runs the hourly `transactions:prune-drafts` sweep and the daily token prune). All three restart unless stopped.
+
+`make smoke` is not part of `make test` and does not overlap with it. The suite forces its own database settings in `phpunit.xml`, so it passes whether or not the application you can actually visit is wired to the database; `make smoke` asks the running container over real HTTP instead.
+
+### Configuration
+
+`.env.example` is the single source of truth for configuration, including the database. It deliberately does not appear as `environment:` entries in `docker-compose.yml`: `php artisan serve` passes only a short whitelist of environment variables through to the PHP process it starts, and `DB_*` is not on that list, so database settings given to the container never reach the process answering requests.
+
+Its defaults are the safe ones (`APP_ENV=production`, `APP_DEBUG=false`, `LOG_LEVEL=warning`), so a copy that reaches a server does not serve stack traces. For local work, set `APP_DEBUG=true` and `LOG_LEVEL=debug` in your own `.env` after it has been created.
 
 The Telegram webhook (`/telegram/webhook`) needs a public HTTPS tunnel in development, since Telegram cannot reach `localhost`. Use a tool such as ngrok or Cloudflare Tunnel and point the bot's webhook URL at the tunnel.
 
