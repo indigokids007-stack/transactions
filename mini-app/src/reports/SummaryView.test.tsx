@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SummaryView } from './SummaryView'
 import { strings } from '../strings'
@@ -28,6 +28,12 @@ it('renders one section per currency and never merges their totals', async () =>
   expect(within(uzs).getByText(/320 000/)).toBeInTheDocument()
   expect(within(usd).getByText(/10\.00/)).toBeInTheDocument()
   expect(screen.queryByText(/321 000/)).not.toBeInTheDocument()
+
+  // The two assertions above pass even if `UZS`'s totals secretly include `USD`'s row
+  // too (nothing sums, and "320 000" still matches once) — these pin the actual
+  // boundary: each currency's own total is the *only* one inside its section.
+  expect(within(uzs).queryByText(/10\.00/)).not.toBeInTheDocument()
+  expect(within(usd).queryByText(/320 000/)).not.toBeInTheDocument()
 })
 
 // The chart is the part most likely to look "done" while actually rendering nothing: a
@@ -94,4 +100,48 @@ it('refetches when the period changes', async () => {
   await waitFor(() =>
     expect(client.summary).toHaveBeenLastCalledWith(expect.objectContaining(nextPeriod)),
   )
+})
+
+// The race the brief names by name: a period change fires a second request while the
+// first is still in flight, and the first happens to settle *after* the second. Without
+// the effect's `ignore` cleanup, the stale first response would land last and clobber the
+// fresh one. Both requests are held open with their own resolver so the test controls
+// the arrival order directly, rather than hoping a fake timer reproduces it.
+it('does not let a stale period response overwrite a newer one', async () => {
+  const resolvers: Array<(report: SummaryReport) => void> = []
+  const client = clientReturning(report)
+  client.summary = vi.fn().mockImplementation(
+    () => new Promise<SummaryReport>((resolve) => resolvers.push(resolve)),
+  )
+
+  const periodA = { from: '2026-07-01', to: '2026-07-31' }
+  const periodB = { from: '2026-08-01', to: '2026-08-31' }
+
+  const { rerender } = render(<SummaryView client={client} period={periodA} exponents={{ UZS: 0 }} />)
+  rerender(<SummaryView client={client} period={periodB} exponents={{ UZS: 0 }} />)
+
+  await waitFor(() => expect(resolvers).toHaveLength(2))
+
+  const staleReport: SummaryReport = {
+    totals: [{ currency: 'UZS', type: 'expense', amount_minor: 111, amount: '111', count: 1 }],
+    groups: [],
+  }
+  const freshReport: SummaryReport = {
+    totals: [{ currency: 'UZS', type: 'expense', amount_minor: 222, amount: '222', count: 1 }],
+    groups: [],
+  }
+
+  // The second (fresher) request settles first ...
+  resolvers[1](freshReport)
+  await screen.findByText('222')
+
+  // ... and only afterwards does the first (now-stale) request settle.
+  await act(async () => {
+    resolvers[0](staleReport)
+    await Promise.resolve()
+    await Promise.resolve()
+  })
+
+  expect(screen.getByText('222')).toBeInTheDocument()
+  expect(screen.queryByText('111')).not.toBeInTheDocument()
 })
