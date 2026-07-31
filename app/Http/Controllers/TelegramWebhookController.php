@@ -172,7 +172,7 @@ class TelegramWebhookController extends Controller
     private function confirm(EntryDraft $draft, CallbackContext $context): void
     {
         $missing = $this->validator
-            ->missingRequiredDimensions(TransactionFieldValidator::dimensionValues($this->payload($draft)['dimension_values'] ?? null))
+            ->missingRequiredDimensions($this->pruneRetiredDimensionValues($draft))
             ->first();
 
         if ($missing instanceof Dimension) {
@@ -204,6 +204,30 @@ class TelegramWebhookController extends Controller
         $this->edit($context, $this->presenter->saved($transaction, $context->user));
 
         $this->telegram->answerCallbackQuery($context->queryId, $this->presenter->line('saved', $context->user));
+    }
+
+    /**
+     * A draft can outlive the values it holds: it is written with the sticky defaults and
+     * only confirmed later, and an admin can retire a value or a whole dimension in
+     * between. A retired value left in the payload is unreachable, because the prompt
+     * only fires for a dimension whose key is absent, so every confirm would answer
+     * `save_failed` and resending the amount would rebuild the same draft.
+     *
+     * Dropping it puts a required dimension back on the asking path and lets a dimension
+     * that is not required simply go unset.
+     *
+     * @return array<int, int>
+     */
+    private function pruneRetiredDimensionValues(EntryDraft $draft): array
+    {
+        $held = TransactionFieldValidator::dimensionValues($this->payload($draft)['dimension_values'] ?? null);
+        $active = TransactionFieldValidator::activeDimensionValues($held);
+
+        if ($active !== $held) {
+            $this->store($draft, ['dimension_values' => $active]);
+        }
+
+        return $active;
     }
 
     /**

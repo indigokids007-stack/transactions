@@ -111,6 +111,41 @@ class TransactionFieldValidator
     }
 
     /**
+     * The entries of a dimension map whose value can still be chosen today: it exists, it
+     * is active, and its own dimension is active.
+     *
+     * A retired value carried forward is not an error to report, it is a dead end. The
+     * bot only prompts for dimensions whose key is absent, so a key that is present but
+     * points at a retired value is never asked about, offers no button, and fails the
+     * write on every attempt. Dropping it turns a permanent lockout into a question the
+     * staff member can answer, or, for a dimension that is not required, into nothing.
+     *
+     * Whether the value belongs to the dimension it is filed under is deliberately not
+     * decided here. That pairing is a validation rule, and `checkSubmittedDimensionValues`
+     * refuses a mismatch rather than quietly discarding it; this only drops what nobody
+     * could pick any more.
+     *
+     * @param  array<int, int>  $values
+     * @return array<int, int>
+     */
+    public static function activeDimensionValues(array $values): array
+    {
+        if ($values === []) {
+            return [];
+        }
+
+        $choosable = DimensionValue::query()
+            ->whereIn('dimension_values.id', $values)
+            ->where('dimension_values.is_active', true)
+            ->whereRelation('dimension', 'is_active', true)
+            ->pluck('id')
+            ->map(fn (mixed $id) => (int) $id)
+            ->all();
+
+        return array_filter($values, fn (int $valueId) => in_array($valueId, $choosable, true));
+    }
+
+    /**
      * The same invariant `CreateTransaction` asserts, checked here so an HTTP caller
      * gets a 422 on the amount field instead of an unhandled exception. Amounts with
      * more decimals than the currency carries are still accepted and rounded; what is

@@ -3,8 +3,10 @@
 namespace App\Support;
 
 use App\Enums\TransactionType;
+use App\Models\DimensionValue;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Validation\TransactionFieldValidator;
 
 class StickyDefaults
 {
@@ -25,9 +27,17 @@ class StickyDefaults
             ];
         }
 
-        $dimensionValues = $transaction->dimensionValues
-            ->mapWithKeys(fn ($value) => [$value->pivot->getAttribute('dimension_id') => $value->id])
-            ->all();
+        $lastUsed = TransactionFieldValidator::dimensionValues(
+            $transaction->dimensionValues
+                ->mapWithKeys(fn (DimensionValue $value) => [$value->pivot->getAttribute('dimension_id') => $value->id])
+                ->all()
+        );
+
+        // Only what is still choosable is carried forward. A value the admin has since
+        // retired, or one whose whole dimension was switched off, would otherwise be
+        // copied into every new draft this person starts, and every one of those drafts
+        // would refuse to save with no button anywhere to change it.
+        $dimensionValues = TransactionFieldValidator::activeDimensionValues($lastUsed);
 
         return [
             'type' => $transaction->type->value,
