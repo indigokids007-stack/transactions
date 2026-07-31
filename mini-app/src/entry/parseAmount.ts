@@ -30,12 +30,18 @@ const MAGNITUDES: Readonly<Record<string, number>> = {
 const BOUND = /^[0-9]{1,15}$/
 
 /**
- * PCRE's `\s` stays ASCII under `/u`, so the class is spelt out rather than borrowed from
- * JavaScript's wider `\s`, which also swallows U+FEFF and would accept a byte order mark
- * the backend refuses. Bank apps paste U+00A0, U+202F, U+2009 and U+2007 as thousands
+ * The exact set the backend flattens, which is neither engine's default. PHP compiles `/u`
+ * with PCRE2_UCP, so its `[\s\p{Z}]` is Unicode-aware and covers 26 code points; the extra
+ * two over `\p{White_Space}` are U+0085, which PCRE's `\v` adds, and U+180E, which its `\h`
+ * adds. JavaScript's own `\s` is a different set again: it omits both and swallows U+FEFF,
+ * which PCRE does not, so borrowing it would let the client read a byte order mark the
+ * server refuses. A code-point sweep of both engines confirms this class and PHP's agree on
+ * all 1,114,112 code points, in both directions.
+ *
+ * Bank apps and spreadsheets paste U+00A0, U+202F, U+2009 and U+2007 as thousands
  * separators, and those must refuse exactly the way `100 000` refuses.
  */
-const WHITESPACE = /[ \t\n\r\f\v\p{Z}]/gu
+const WHITESPACE = /[\p{White_Space}\u180E]/gu
 
 /** What PHP's `trim` strips once every whitespace character is already a space. */
 const TRIMMABLE = /^[ \0]+|[ \0]+$/g
