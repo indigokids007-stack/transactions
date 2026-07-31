@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { SessionState } from './auth/useSession'
 import type { ApiClient } from './api/client'
 import { EntryScreen } from './entry/EntryScreen'
+import { HistoryScreen } from './history/HistoryScreen'
 import { ReportsScreen } from './reports/ReportsScreen'
 import { usePeriod } from './reports/usePeriod'
 import { strings } from './strings'
@@ -84,6 +85,8 @@ export function App({ session, onRetry, client }: AppProps) {
                 exponents={session.bootstrap.currencies}
                 dimensions={session.bootstrap.dimensions}
               />
+            ) : item.id === 'history' && client ? (
+              <HistoryScreen client={client} bootstrap={session.bootstrap} user={session.user} />
             ) : (
               <PanelPlaceholder label={item.label} />
             )}

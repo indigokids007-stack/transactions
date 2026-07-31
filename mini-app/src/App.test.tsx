@@ -101,6 +101,40 @@ it('lets a staff member reach the trend view but never the staff comparison', as
   expect(await screen.findByTestId('trend-UZS')).toBeInTheDocument()
 })
 
+// Task 8's own retrospective: Tasks 7 and 8 built views no user could actually open,
+// because nothing wired them into a tab. This is the same proof for Task 9 — the History
+// tab renders `HistoryScreen` and its data reaches the screen, not a placeholder.
+it('lets a user reach the history list through the History tab', async () => {
+  const user = userEvent.setup()
+  const client = clientStub({
+    listTransactions: vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: 1,
+          type: 'expense',
+          amount_minor: 50000,
+          amount: '50000',
+          currency: 'UZS',
+          occurred_on: '2026-07-20',
+          note: null,
+          category: { id: 7, name: 'Taksi' },
+          user: { id: 1, name: 'Malika Karimova' },
+          department: null,
+          dimension_values: [],
+          created_at: null,
+          updated_at: null,
+        },
+      ],
+      meta: { next_cursor: null },
+    }),
+  })
+  render(<App session={activeSession} client={client} />)
+
+  await user.click(screen.getByRole('tab', { name: strings.tabs.history }))
+
+  expect(await screen.findByTestId('transaction-1')).toBeInTheDocument()
+})
+
 it('has an aria-controls target that resolves to an element in the document, for every tab', () => {
   render(<App session={activeSession} />)
 

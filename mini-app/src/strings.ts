@@ -16,6 +16,10 @@ export const strings = {
   },
   common: {
     retry: 'Qaytadan urinish',
+    save: 'Saqlash',
+    delete: "O'chirish",
+    confirm: 'Tasdiqlash',
+    cancel: 'Bekor qilish',
   },
   entry: {
     amount: 'Summa',
@@ -61,5 +65,21 @@ export const strings = {
     bySummary: 'Umumiy',
     byTrend: 'Dinamika',
     byStaff: 'Xodimlar',
+  },
+  history: {
+    // Filter labels: `category`/`currency` reuse the same words as the entry form's
+    // fields, since they name the same concepts; only the "all X" options below are new.
+    category: 'Turkum',
+    currency: 'Valyuta',
+    allCategories: 'Barcha turkumlar',
+    allCurrencies: 'Barcha valyutalar',
+    allValues: 'Barchasi',
+    empty: "Bu davr uchun yozuvlar yo'q.",
+    loadFailed: "Tarixni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
+    deleteConfirm: "Haqiqatan ham o'chirmoqchimisiz?",
+    // Shown for any save/delete failure that isn't a validation 422 — the server's own
+    // `message` (a 403/404 refusal, or anything else) reaches the user verbatim rather
+    // than being replaced with a client-side guess about why it failed.
+    actionFailed: "Amalni bajarib bo'lmadi.",
   },
 } as const
