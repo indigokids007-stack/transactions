@@ -73,3 +73,28 @@
 ## Seat downgrade, round 2
 
 The `gpt-5.6-sol` weekly quota ran out after round 1. The full-lane primary seat for a Claude-built diff is `gpt-5.6-sol` at effort `high`; round 2 ran on `gpt-5.6-terra` at effort `medium`, the light-lane seat. Human ruled 2026-08-01: continue on terra rather than spend a usage reset or stop. Recall is lower than the seat table intends; weigh that when reading round 2's verdict.
+
+## Round 2, gpt-5.6-terra (seat downgraded)
+
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• BLOCKER — Report totals still lose cents for large decimal-currency aggregates. mini-app/src/ui/Money.tsx:33
+  now treats API amount as exact, but app/Support/Money.php:60 converts through a float. Live check:
+  10000000000000001 USD minor units becomes "100000000000000.00" instead of "100000000000000.01". The new
+  client tests use a fabricated exact string, so they do not cover the production contract. This requires an
+  exact server decimal representation before the UI can meet the precision criterion.
+
+  MAJOR — A slow stale “load more” request can permanently disable pagination for the newly selected filter.
+  mini-app/src/history/useTransactions.ts:113 sets the global loadingMoreRef; switching filters advances the
+  generation but does not release that guard. If the old request never settles, the new list may have a next
+  cursor but every loadMore() returns immediately. The added race test resolves the stale request, so it misses
+  this state.
+
+  MAJOR — The newly added revisions request fails silently. mini-app/src/history/useRevisionCount.ts:21 turns
+  both loading and failure into null, leaving the sheet with an indistinguishable placeholder and no retry,
+  contrary to the mini-app error-handling requirement.
+
+  Verified: mini-app tests 248/248, typecheck/lint, production build, revision endpoint focused backend tests,
+  clean diff check, and clean worktree.
+
+  VERDICT: CHANGES REQUESTED
