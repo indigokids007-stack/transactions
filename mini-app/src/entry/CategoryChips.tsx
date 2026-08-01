@@ -45,7 +45,7 @@ export function CategoryChips({ categories, type, selectedId, defaultId, onSelec
             className="whitespace-nowrap rounded-full px-4 py-2 text-sm"
             style={{
               background: selected ? 'var(--accent)' : 'var(--tg-secondary-bg)',
-              color: selected ? 'var(--tg-button-text)' : 'var(--tg-text)',
+              color: selected ? 'var(--accent-text)' : 'var(--tg-text)',
             }}
           >
             {category.name}

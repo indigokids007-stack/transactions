@@ -45,7 +45,7 @@ export function ReportsScreen({ user, client, period, dimensions = [] }: Reports
   const [view, setView] = useState<ReportView>('summary')
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <PeriodPicker period={period} />
 
       <div role="group" aria-label={strings.reports.view} className="flex gap-2 px-4">
@@ -58,7 +58,7 @@ export function ReportsScreen({ user, client, period, dimensions = [] }: Reports
             className="rounded-full px-3 py-1 text-sm"
             style={{
               background: view === item.id ? 'var(--accent)' : 'var(--tg-secondary-bg)',
-              color: view === item.id ? 'var(--tg-button-text)' : 'var(--tg-text)',
+              color: view === item.id ? 'var(--accent-text)' : 'var(--tg-text)',
             }}
           >
             {item.label}

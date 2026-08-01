@@ -119,7 +119,7 @@ export function TransactionSheet({
               disabled={saving}
               onClick={() => void save()}
               className="flex-1 rounded-full py-3 text-center font-semibold disabled:opacity-50"
-              style={{ background: 'var(--tg-button)', color: 'var(--tg-button-text)' }}
+              style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
             >
               {strings.common.save}
             </button>
@@ -135,7 +135,7 @@ export function TransactionSheet({
                 disabled={deleting}
                 onClick={() => void confirmDelete()}
                 className="rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50"
-                style={{ background: 'var(--tg-button)', color: 'var(--tg-button-text)' }}
+                style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
               >
                 {strings.common.confirm}
               </button>

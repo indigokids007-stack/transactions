@@ -32,6 +32,10 @@
   --accent-2: var(--chart-2);
   --surface-card: #fcfcfb;
   --border: rgba(11, 11, 11, 0.1);
+  /* Accent backgrounds are fixed (not Telegram-driven), so their foreground must be
+     fixed too — Telegram only guarantees `button_text_color` contrasts against its own
+     `button_color`, not against this app's `--accent`. */
+  --accent-text: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -47,6 +51,24 @@
     --surface-card: #1a1a19;
     --border: rgba(255, 255, 255, 0.1);
   }
+}
+
+/* Same dark palette as the media query above, but keyed off Telegram's own theme signal
+   (`useTheme.ts` sets `data-theme` from the WebApp's `colorScheme`) rather than the OS's
+   `prefers-color-scheme`. The two can disagree — Telegram's in-app theme is independent
+   of the OS setting — so this is the authoritative signal once `useTheme` has run; the
+   media query above remains the fallback for first paint and for outside-Telegram use. */
+:root[data-theme='dark'] {
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #008300;
+  --chart-7: #9085e9;
+  --chart-8: #e66767;
+  --surface-card: #1a1a19;
+  --border: rgba(255, 255, 255, 0.1);
 }
 
 body {

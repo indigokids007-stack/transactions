@@ -11,7 +11,7 @@ const PRESETS = ['this-month', 'last-month'] as const
 function chipStyle(selected: boolean): { background: string; color: string } {
   return {
     background: selected ? 'var(--accent)' : 'var(--tg-secondary-bg)',
-    color: selected ? 'var(--tg-button-text)' : 'var(--tg-text)',
+    color: selected ? 'var(--accent-text)' : 'var(--tg-text)',
   }
 }
 
@@ -47,7 +47,10 @@ export function PeriodPicker({ period }: PeriodPickerProps) {
   }
 
   return (
-    <div className="flex flex-col gap-2 px-4 py-2">
+    <div
+      className="flex flex-col gap-3 rounded-xl border px-4 py-2 shadow-sm"
+      style={{ background: 'var(--surface-card)', borderColor: 'var(--border)' }}
+    >
       <div role="group" aria-label={strings.reports.period} className="flex gap-2">
         {PRESETS.map((preset) => {
           const selected = period.preset === preset
@@ -76,8 +79,8 @@ export function PeriodPicker({ period }: PeriodPickerProps) {
       </div>
 
       {period.preset === 'custom' && (
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2">
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-3">
             <label className="block text-sm">
               {strings.reports.rangeFrom}
               <input

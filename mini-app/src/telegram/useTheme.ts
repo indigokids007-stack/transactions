@@ -32,6 +32,11 @@ export function useTheme(): void {
       for (const { cssVar, paramKey, fallback } of THEME_MAPPINGS) {
         root.style.setProperty(cssVar, app.themeParams[paramKey] ?? fallback)
       }
+      // The fixed accent/chart token layer (`styles.css`) switches on this attribute
+      // rather than on OS `prefers-color-scheme` alone, so it can't disagree with the
+      // Telegram-driven `--tg-*` layer above — see the `[data-theme]` block in
+      // `styles.css` for the other half of this.
+      root.dataset.theme = app.colorScheme
     }
 
     applyTheme()

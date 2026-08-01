@@ -50,7 +50,7 @@ export function Tabs({ value, onChange, items }: TabsProps) {
               aria-label={item.label}
               tabIndex={selected ? 0 : -1}
               className="-mt-6 flex h-12 w-12 items-center justify-center rounded-full shadow-lg"
-              style={{ background: 'var(--accent)', color: 'var(--tg-button-text)' }}
+              style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
               onClick={() => onChange(item.id)}
             >
               <Icon size={24} aria-hidden="true" />

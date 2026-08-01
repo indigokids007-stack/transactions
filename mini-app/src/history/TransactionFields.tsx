@@ -28,8 +28,8 @@ export function TransactionFields({ values, bootstrap, onChange }: TransactionFi
             onClick={() => onChange({ type })}
             className="rounded-full px-3 py-1 text-sm"
             style={{
-              background: values.type === type ? 'var(--tg-button)' : 'var(--tg-secondary-bg)',
-              color: values.type === type ? 'var(--tg-button-text)' : 'var(--tg-text)',
+              background: values.type === type ? 'var(--accent)' : 'var(--tg-secondary-bg)',
+              color: values.type === type ? 'var(--accent-text)' : 'var(--tg-text)',
             }}
           >
             {strings.entry[type]}

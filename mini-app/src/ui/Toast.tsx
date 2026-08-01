@@ -28,7 +28,7 @@ export function Toast({ message, action, onAction, onDismiss, duration = DEFAULT
     <div
       role="status"
       className="fixed inset-x-4 bottom-20 flex items-center justify-between gap-4 rounded-xl px-4 py-3 shadow-lg"
-      style={{ background: 'var(--accent)', color: 'var(--tg-button-text)' }}
+      style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
     >
       <span>{message}</span>
       {action && onAction ? (
