@@ -88,3 +88,48 @@ it('hides the bulk activate action from an owner and refuses it even mounted dir
 
     expect($pending->fresh()->status)->toBe(UserStatus::Pending);
 });
+
+it('lets an admin edit an already active user\'s role and department', function () {
+    $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
+    $department = Department::factory()->create();
+    $active = User::factory()->create(['status' => UserStatus::Active, 'role' => UserRole::Staff]);
+
+    Livewire::test(ListUsers::class)
+        ->filterTable('status', null)
+        ->assertTableActionVisible('edit', $active)
+        ->callTableAction('edit', $active, data: [
+            'role' => UserRole::Manager->value,
+            'department_id' => $department->id,
+        ]);
+
+    $fresh = $active->fresh();
+
+    expect($fresh->status)->toBe(UserStatus::Active)
+        ->and($fresh->role)->toBe(UserRole::Manager)
+        ->and($fresh->department_id)->toBe($department->id);
+});
+
+it('hides the edit action from a pending user, who is activated instead', function () {
+    $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
+    $pending = User::factory()->create(['status' => UserStatus::Pending]);
+
+    Livewire::test(ListUsers::class)
+        ->assertTableActionHidden('edit', $pending);
+});
+
+it('hides the edit action from an owner and refuses it even mounted directly', function () {
+    $this->actingAs(User::factory()->create(['role' => UserRole::Owner]));
+    $department = Department::factory()->create();
+    $active = User::factory()->create(['status' => UserStatus::Active, 'role' => UserRole::Staff]);
+
+    Livewire::test(ListUsers::class)
+        ->filterTable('status', null)
+        ->assertTableActionHidden('edit', $active)
+        ->mountTableAction('edit', $active)
+        ->callMountedTableAction();
+
+    $fresh = $active->fresh();
+
+    expect($fresh->role)->toBe(UserRole::Staff)
+        ->and($fresh->department_id)->toBeNull();
+});

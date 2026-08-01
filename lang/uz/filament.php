@@ -11,6 +11,8 @@ return [
     'user' => [
         'activate_action' => 'Faollashtirish',
         'activate_action_modal_heading' => 'Foydalanuvchini faollashtirish',
+        'edit_action' => 'Tahrirlash',
+        'edit_action_modal_heading' => 'Foydalanuvchini tahrirlash',
     ],
     'settings' => [
         'registration_open_label' => 'Roʻyxatdan oʻtish ochiq',
