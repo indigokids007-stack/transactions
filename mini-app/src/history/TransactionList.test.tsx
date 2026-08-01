@@ -34,6 +34,12 @@ it('shows an income row with an up-arrow icon and an expense row with a down-arr
   const incomeRow = screen.getByTestId('transaction-1')
   const expenseRow = screen.getByTestId('transaction-2')
 
-  expect(incomeRow.querySelector('svg')).toBeInTheDocument()
-  expect(expenseRow.querySelector('svg')).toBeInTheDocument()
+  const incomeIcon = incomeRow.querySelector('svg')
+  const expenseIcon = expenseRow.querySelector('svg')
+
+  expect(incomeIcon).toBeInTheDocument()
+  expect(expenseIcon).toBeInTheDocument()
+  // Both branches render *some* svg, so also pin that the two types render
+  // genuinely different icons (not the same icon, or swapped branches).
+  expect(incomeIcon?.outerHTML).not.toBe(expenseIcon?.outerHTML)
 })
