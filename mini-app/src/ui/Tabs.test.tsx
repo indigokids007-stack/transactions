@@ -35,3 +35,14 @@ it('reports the clicked tab id and leaves the shown selection to the parent', as
   // does not move the selection.
   expect(screen.getByRole('tab', { name: 'Kiritish' })).toHaveAttribute('aria-selected', 'true')
 })
+
+it('renders the add tab as a raised button with no visible text label', () => {
+  render(<Tabs value="reports" onChange={() => {}} items={items} />)
+
+  const addTab = screen.getByRole('tab', { name: 'Kiritish' })
+  // The FAB carries its label via `aria-label` for a11y — its accessible name still
+  // matches `items`' label — but shows no separate text node beside the icon, unlike
+  // the Reports/History tabs which render their label as visible text.
+  expect(addTab).toHaveAttribute('aria-label', 'Kiritish')
+  expect(addTab.textContent?.trim()).toBe('')
+})
