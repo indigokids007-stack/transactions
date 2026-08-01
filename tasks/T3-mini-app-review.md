@@ -98,3 +98,30 @@ The `gpt-5.6-sol` weekly quota ran out after round 1. The full-lane primary seat
   clean diff check, and clean worktree.
 
   VERDICT: CHANGES REQUESTED
+
+## Round 3, gpt-5.6-terra (seat downgraded)
+
+  └ ## feat/transactions-mini-app
+
+
+
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• The three stated fixes pass their normal and race paths. I found one remaining boundary regression in the new
+  formatter: the signed PostgreSQL bigint minimum now throws instead of formatting, so the last-round rule
+  requires a human decision.
+
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• MAJOR — app/Support/Money.php:65 throws for PHP_INT_MIN with a decimal currency. amount_minor is a signed
+  PostgreSQL bigInteger, but abs(PHP_INT_MIN) becomes a float, so intdiv() raises TypeError. Live check:
+  Money::toDecimal(-9223372036854775808, 'USD') fails; the added negative test only covers -10000000000000001.
+  This formatter serves API resources, exports, and reports.
+
+  Decision: should the formatter support the complete signed bigint domain now?
+
+  - Fix the minimum-int decomposition now — preserves the formatter contract for every storable value.
+    Recommended.
+
+  - Enforce a positive-only database invariant — narrower, but requires a schema/data-policy change and makes
+    the formatter assumption explicit.
