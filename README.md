@@ -53,6 +53,40 @@ The panel at `/admin` uses Filament's standard email and password login; staff o
 
 The test suite always runs against a separate `transactions_test` database on the same Postgres server, never against the `transactions` development database, since the suite uses `RefreshDatabase` and would otherwise wipe development data on every run. This holds regardless of how the suite is invoked, `make test`, `php artisan test`, or `vendor/bin/pest` directly inside the container, because `tests/bootstrap.php` (the PHPUnit `bootstrap` entry point, shared by all three) forces `DB_DATABASE=transactions_test` before the application boots. `make up` and `make test` both depend on the `test-db` Makefile target, which creates `transactions_test` if it does not already exist, so no manual setup step is required.
 
+## Mini app
+
+The Telegram mini app in `mini-app/` is a separate React SPA that talks to this API. Unlike the backend above, it runs directly on the host with Node 22 rather than in Docker:
+
+```bash
+make app-dev    # start the Vite dev server
+make app-test   # run the Vitest suite
+make app-build  # produce a production build
+make app-lint   # type-check with tsc
+```
+
 ## Ownership
 
 Owned by the Cara team.
+
+## Serving the mini app from Laravel
+
+The mini app is built into `public/app`, so Laravel serves it on the same origin as the
+API. One domain, no CORS, one deploy.
+
+```bash
+make app-deploy      # builds mini-app into public/app with an empty API base URL
+```
+
+The API is then reached at `/api/...` relative to the same host, which is why
+`VITE_API_BASE_URL` is empty in that target. `public/app` is a build artefact and is
+gitignored; run `make app-deploy` as part of deployment.
+
+Point Telegram at it by setting the URL in BotFather (`/newapp` or `/setmenubutton`) and
+in `.env`:
+
+```
+TELEGRAM_MINI_APP_URL=https://your-domain/app/
+```
+
+Run `php artisan config:clear` after changing it. The bot only shows its "open in app"
+button when that URL is https.

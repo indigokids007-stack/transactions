@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!--
+      Telegram's Mini Apps documentation (https://core.telegram.org/bots/webapps) requires
+      this script to load before any other script on the page. Without it,
+      `window.Telegram.WebApp` is never created, `telegram/webApp.ts` falls back to its
+      no-Telegram stub, and the app can never authenticate. See
+      `telegram/telegramScriptOrder.test.ts`, which reads this file and fails if the tag is
+      removed or moved after the module script below.
+    -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mini-app</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

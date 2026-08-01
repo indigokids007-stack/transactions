@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fallback palette so the first paint (before `useTheme`'s effect runs) is already
+   readable. `useTheme` overwrites these with Telegram's own colours when available,
+   using the same values as its own default, so both Telegram themes work without a
+   second stylesheet. */
+:root {
+  --tg-bg: #ffffff;
+  --tg-text: #111111;
+  --tg-hint: #707579;
+  --tg-button: #2481cc;
+  --tg-button-text: #ffffff;
+  --tg-secondary-bg: #f0f0f0;
+}
+
+body {
+  background-color: var(--tg-bg);
+  color: var(--tg-text);
+}

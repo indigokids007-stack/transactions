@@ -31,6 +31,7 @@ Everything the backend build deliberately deferred, in priority order, so none o
 
 ### Parser (bot amount grammar)
 
+- **A case-fold-equivalent but table-absent suffix silently drops the magnitude.** `7тыᲃ` (U+1C83, the Cyrillic "long es") matches the `тыс` alternation caselessly in PCRE, misses the table lookup, and records 7 instead of 7000. Found during the mini app's differential port; the client mirrors the behaviour exactly, so it is a backend grammar hazard rather than a divergence. Same class as the Cyrillic `к` homoglyph fixed during the build: the alternation matches more spellings than the lookup table knows.
 - Latin transliterations missing from the magnitude table (`5 lyam` records 5).
 - Mixed-script word magnitudes (`5 мln`, `5 mлн`) record a fraction; needs a mid-word keyboard switch, unlikely but silent.
 - Deliberate refusals worth watching for complaints: `50 k non` style spaced suffixes, `1 mln 500 ming`, notes opening with 2+ digits (`50000 12 kishi`), `12.50` meaning 12500.

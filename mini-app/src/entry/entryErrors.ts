@@ -1,0 +1,83 @@
+// Reading a save failure and deciding what a stale 422 means: split out of `useEntryForm`
+// so that file stays about state, not about interpreting the shape of an error.
+import type { ApiClient } from '../api/client'
+import type { Bootstrap } from '../api/types'
+
+export type FieldErrors = Record<string, string[]>
+
+// Duck-typed the way `useSession`'s `toRejectedState` reads a rejection: the real
+// `ApiError` carries `status`/`errors`, and tests stand in a plain object of the same
+// shape, so neither an `instanceof` check nor a specific error class should be required.
+export function readStatus(error: unknown): number | undefined {
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    const status = (error as { status?: unknown }).status
+    return typeof status === 'number' ? status : undefined
+  }
+  return undefined
+}
+
+export function readErrors(error: unknown): FieldErrors | undefined {
+  if (typeof error !== 'object' || error === null || !('errors' in error)) return undefined
+
+  const errors = (error as { errors?: unknown }).errors
+  if (typeof errors !== 'object' || errors === null) return undefined
+  if (!Object.values(errors).every((messages) => Array.isArray(messages))) return undefined
+
+  return errors as FieldErrors
+}
+
+// The one list of keys a 422 can name that mean a reference row (the category, or a
+// dimension's value) was deactivated after bootstrap loaded: retrying the same pick can
+// never succeed, so these get a refetch-and-reset instead of an inline field message.
+// Every function below reads this constant rather than its own copy of the field names —
+// adding a stale-reference field means adding it HERE, and nowhere else. Two independent
+// copies of these literals is exactly how the raw backend message for a stale field once
+// leaked back into the UI alongside the friendly notice; this constant is what closes
+// that off for good.
+export const STALE_REFERENCE_FIELDS: readonly string[] = ['category_id', 'dimension_values']
+const [CATEGORY_FIELD, DIMENSION_VALUES_FIELD] = STALE_REFERENCE_FIELDS
+
+export function staleCategory(errors: FieldErrors): boolean {
+  return CATEGORY_FIELD in errors
+}
+
+export function staleDimensions(errors: FieldErrors): boolean {
+  return DIMENSION_VALUES_FIELD in errors
+}
+
+export function isStaleReference(errors: FieldErrors): boolean {
+  return STALE_REFERENCE_FIELDS.some((field) => field in errors)
+}
+
+// Drops the stale-reference keys from a field-error map so a caller that has already
+// shown the friendlier `referenceChanged` notice doesn't also render the raw backend
+// string for the same failure underneath it. Any other field the same 422 named (an
+// unrelated `note` or `amount` error arriving alongside a stale category, say) survives.
+export function withoutStaleReferenceFields(errors: FieldErrors): FieldErrors {
+  return Object.fromEntries(
+    Object.entries(errors).filter(([field]) => !STALE_REFERENCE_FIELDS.includes(field)),
+  )
+}
+
+export type StaleReferenceResolution = {
+  reference: Bootstrap
+  categoryId: number | null
+  dimensionValues: Record<number, number>
+}
+
+// Refetches the reference data and decides which of the user's current picks survive:
+// only the field(s) the 422 actually named as stale are cleared, so an amount or note
+// already typed is never wiped along with a category that just needs re-picking.
+export async function resolveStaleReference(
+  errors: FieldErrors,
+  client: Pick<ApiClient, 'bootstrap'>,
+  current: { categoryId: number | null; dimensionValues: Record<number, number> },
+): Promise<StaleReferenceResolution> {
+  const reference = await client.bootstrap()
+
+  return {
+    reference,
+    categoryId: staleCategory(errors) ? reference.defaults.category_id : current.categoryId,
+    dimensionValues: staleDimensions(errors) ? {} : current.dimensionValues,
+  }
+}

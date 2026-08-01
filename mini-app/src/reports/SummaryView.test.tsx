@@ -1,0 +1,197 @@
+import { act, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { SummaryView } from './SummaryView'
+import { strings } from '../strings'
+import { clientReturning } from '../test/fixtures'
+import type { SummaryReport } from '../api/types'
+
+const period = { from: '2026-07-01', to: '2026-07-31' }
+
+const report: SummaryReport = {
+  totals: [
+    { currency: 'UZS', type: 'expense', amount_minor: 320000, amount: '320000', count: 4 },
+    { currency: 'USD', type: 'expense', amount_minor: 1000, amount: '10.00', count: 1 },
+  ],
+  groups: [
+    { key: '7', label: 'Taksi', currency: 'UZS', type: 'expense', amount_minor: 120000, amount: '120000', count: 2 },
+    { key: '8', label: 'Ofis', currency: 'UZS', type: 'expense', amount_minor: 200000, amount: '200000', count: 2 },
+    { key: '7', label: 'Taksi', currency: 'USD', type: 'expense', amount_minor: 1000, amount: '10.00', count: 1 },
+  ],
+}
+
+it('renders one section per currency and never merges their totals', async () => {
+  render(<SummaryView client={clientReturning(report)} period={period} />)
+
+  const uzs = await screen.findByTestId('currency-UZS')
+  const usd = await screen.findByTestId('currency-USD')
+
+  expect(within(uzs).getByText(/320 000/)).toBeInTheDocument()
+  expect(within(usd).getByText(/10\.00/)).toBeInTheDocument()
+  expect(screen.queryByText(/321 000/)).not.toBeInTheDocument()
+
+  // The two assertions above pass even if `UZS`'s totals secretly include `USD`'s row
+  // too (nothing sums, and "320 000" still matches once) — these pin the actual
+  // boundary: each currency's own total is the *only* one inside its section.
+  expect(within(uzs).queryByText(/10\.00/)).not.toBeInTheDocument()
+  expect(within(usd).queryByText(/320 000/)).not.toBeInTheDocument()
+})
+
+// The chart is the part most likely to look "done" while actually rendering nothing: a
+// pie with no visible slices still leaves the totals assertion above green. This proves
+// each currency's own group rows actually reached the chart, not just the totals line —
+// asserting on the legend text rather than SVG geometry, per the brief's guidance for
+// Recharts under jsdom.
+it('draws each currency chart from its own group rows, not the other currency\'s', async () => {
+  render(
+    <SummaryView
+      client={clientReturning(report)}
+      period={period}
+      chartWidth={320}
+      chartHeight={240}
+    />,
+  )
+
+  const uzs = await screen.findByTestId('currency-UZS')
+  const usd = await screen.findByTestId('currency-USD')
+
+  // The legend payload reaches the DOM through recharts' own internal store, one tick
+  // after the surrounding render — a plain `getByText` here would pass or fail on
+  // timing alone, not on which rows the chart was given.
+  expect(await within(uzs).findByText('Taksi')).toBeInTheDocument()
+  expect(await within(uzs).findByText('Ofis')).toBeInTheDocument()
+  expect(await within(usd).findByText('Taksi')).toBeInTheDocument()
+  expect(within(usd).queryByText('Ofis')).not.toBeInTheDocument()
+})
+
+it('asks the api to group by a dimension when one is chosen', async () => {
+  const client = clientReturning(report)
+  render(
+    <SummaryView
+      client={client}
+      period={period}
+      dimensions={[{ id: 3, key: 'branch', name: 'Filial', is_required: false, values: [] }]}
+    />,
+  )
+
+  await userEvent.selectOptions(screen.getByLabelText(strings.reports.groupBy), 'dimension:branch')
+
+  await waitFor(() =>
+    expect(client.summary).toHaveBeenLastCalledWith(expect.objectContaining({ group_by: 'dimension:branch' })),
+  )
+})
+
+// The review's exact scenario: ten maximal transactions (1e15 minor units, the backend's
+// per-transaction cap) plus one more minor unit sums to 10000000000000001 — one past
+// Number.MAX_SAFE_INTEGER (2^53 - 1). This fixture's `amount_minor` is deliberately the
+// value `JSON.parse` would have rounded that sum down to, standing in for what a real
+// network response already looks like by the time it reaches this component; `amount`
+// carries the true figure as the backend's precision-safe string. If `CurrencySection`
+// ever went back to formatting `amount_minor` instead, this total would render the wrong,
+// rounded figure.
+it('renders a total above Number.MAX_SAFE_INTEGER exactly, from the string amount, not amount_minor', async () => {
+  const bigReport: SummaryReport = {
+    totals: [
+      { currency: 'UZS', type: 'expense', amount_minor: 10000000000000000, amount: '10000000000000001', count: 11 },
+    ],
+    groups: [],
+  }
+  render(<SummaryView client={clientReturning(bigReport)} period={period} />)
+
+  const uzs = await screen.findByTestId('currency-UZS')
+  expect(within(uzs).getByText(/10 000 000 000 000 001/)).toBeInTheDocument()
+  expect(within(uzs).queryByText(/10 000 000 000 000 000\b/)).not.toBeInTheDocument()
+})
+
+it('says there is nothing rather than drawing an empty chart', async () => {
+  render(<SummaryView client={clientReturning({ totals: [], groups: [] })} period={period} />)
+
+  expect(await screen.findByText(strings.reports.empty)).toBeInTheDocument()
+})
+
+it('refetches when the period changes', async () => {
+  const client = clientReturning(report)
+  const { rerender } = render(<SummaryView client={client} period={period} />)
+
+  await screen.findByTestId('currency-UZS')
+
+  const nextPeriod = { from: '2026-08-01', to: '2026-08-31' }
+  rerender(<SummaryView client={client} period={nextPeriod} />)
+
+  await waitFor(() =>
+    expect(client.summary).toHaveBeenLastCalledWith(expect.objectContaining(nextPeriod)),
+  )
+})
+
+// The race the brief names by name: a period change fires a second request while the
+// first is still in flight, and the first happens to settle *after* the second. Without
+// the effect's `ignore` cleanup, the stale first response would land last and clobber the
+// fresh one. Both requests are held open with their own resolver so the test controls
+// the arrival order directly, rather than hoping a fake timer reproduces it.
+it('does not let a stale period response overwrite a newer one', async () => {
+  const resolvers: Array<(report: SummaryReport) => void> = []
+  const client = clientReturning(report)
+  client.summary = vi.fn().mockImplementation(
+    () => new Promise<SummaryReport>((resolve) => resolvers.push(resolve)),
+  )
+
+  const periodA = { from: '2026-07-01', to: '2026-07-31' }
+  const periodB = { from: '2026-08-01', to: '2026-08-31' }
+
+  const { rerender } = render(<SummaryView client={client} period={periodA} />)
+  rerender(<SummaryView client={client} period={periodB} />)
+
+  await waitFor(() => expect(resolvers).toHaveLength(2))
+
+  const staleReport: SummaryReport = {
+    totals: [{ currency: 'UZS', type: 'expense', amount_minor: 111, amount: '111', count: 1 }],
+    groups: [],
+  }
+  const freshReport: SummaryReport = {
+    totals: [{ currency: 'UZS', type: 'expense', amount_minor: 222, amount: '222', count: 1 }],
+    groups: [],
+  }
+
+  // The second (fresher) request settles first ...
+  resolvers[1](freshReport)
+  await screen.findByText('222')
+
+  // ... and only afterwards does the first (now-stale) request settle.
+  await act(async () => {
+    resolvers[0](staleReport)
+    await Promise.resolve()
+    await Promise.resolve()
+  })
+
+  expect(screen.getByText('222')).toBeInTheDocument()
+  expect(screen.queryByText('111')).not.toBeInTheDocument()
+})
+
+// The review's finding: a failed request used to render a dead end with no action.
+it('offers a retry action when the request fails, and retrying refetches', async () => {
+  const client = clientReturning(report)
+  client.summary = vi
+    .fn()
+    .mockRejectedValueOnce({ status: 500, message: 'Server exploded.' })
+    .mockResolvedValueOnce(report)
+
+  render(<SummaryView client={client} period={period} />)
+
+  expect(await screen.findByText(strings.reports.loadFailed)).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: strings.common.retry }))
+
+  await screen.findByTestId('currency-UZS')
+  expect(client.summary).toHaveBeenCalledTimes(2)
+})
+
+// The other half of the same finding: a 429 must read as "too many requests, try again
+// in a moment", not the generic failure message — the authenticated API and the export
+// both carry rate limits, so this is a state a person actually reaches.
+it('shows a specific message for a 429, not the generic failure', async () => {
+  const client = clientReturning(report)
+  client.summary = vi.fn().mockRejectedValue({ status: 429, message: 'Too Many Requests' })
+
+  render(<SummaryView client={client} period={period} />)
+
+  expect(await screen.findByText(strings.reports.rateLimited)).toBeInTheDocument()
+  expect(screen.queryByText(strings.reports.loadFailed)).not.toBeInTheDocument()
+})

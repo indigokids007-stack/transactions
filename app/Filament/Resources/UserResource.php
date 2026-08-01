@@ -22,9 +22,9 @@ use Filament\Tables\Table;
 use Illuminate\Support\Collection;
 
 /**
- * Users are never created here: they arrive through the bot. The panel's one write path
- * onto this model is activating a pending user, which is also where role and department
- * are set, so admins never juggle a separate edit screen for the same decision.
+ * Users are never created here: they arrive through the bot. The panel writes onto this
+ * model in two places: activating a pending user, and editing an already-active user's
+ * role and department afterwards — the same two fields, so both actions share one form.
  */
 class UserResource extends Resource
 {
@@ -70,6 +70,7 @@ class UserResource extends Resource
             ])
             ->recordActions([
                 self::activateAction(),
+                self::editAction(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -101,6 +102,32 @@ class UserResource extends Resource
             ->action(function (User $record, array $data): void {
                 $record->update([
                     'status' => UserStatus::Active,
+                    'role' => $data['role'],
+                    'department_id' => $data['department_id'],
+                ]);
+            });
+    }
+
+    /**
+     * The mirror of `activateAction()` for a user who is already active: same two
+     * fields, no status change. Kept as a distinct action rather than widening
+     * `activateAction()`'s visibility, so the modal heading and the audit trail
+     * ("activate" vs "edit") stay honest about which one actually ran.
+     */
+    private static function editAction(): Action
+    {
+        return Action::make('edit')
+            ->label(__('filament.user.edit_action'))
+            ->modalHeading(__('filament.user.edit_action_modal_heading'))
+            ->icon(Heroicon::OutlinedPencilSquare)
+            ->visible(fn (User $record): bool => PanelUser::isAdmin() && $record->status !== UserStatus::Pending)
+            ->schema(self::activationSchema())
+            ->fillForm(fn (User $record): array => [
+                'role' => $record->role->value,
+                'department_id' => $record->department_id,
+            ])
+            ->action(function (User $record, array $data): void {
+                $record->update([
                     'role' => $data['role'],
                     'department_id' => $data['department_id'],
                 ]);

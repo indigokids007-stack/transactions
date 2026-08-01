@@ -1,0 +1,107 @@
+import { renderHook } from '@testing-library/react'
+import { useTheme } from './useTheme'
+
+function readVar(name: string): string {
+  return document.documentElement.style.getPropertyValue(name)
+}
+
+afterEach(() => {
+  delete window.Telegram
+  document.documentElement.removeAttribute('style')
+})
+
+it('applies a readable light palette outside Telegram', () => {
+  renderHook(() => useTheme())
+
+  expect(readVar('--tg-bg')).toBe('#ffffff')
+  expect(readVar('--tg-text')).toBe('#111111')
+  expect(readVar('--tg-hint')).toBe('#707579')
+  expect(readVar('--tg-button')).toBe('#2481cc')
+  expect(readVar('--tg-button-text')).toBe('#ffffff')
+  expect(readVar('--tg-secondary-bg')).toBe('#f0f0f0')
+})
+
+it('applies the Telegram theme params when present, and calls ready/expand', () => {
+  const ready = vi.fn()
+  const expand = vi.fn()
+  window.Telegram = {
+    WebApp: {
+      initData: '',
+      colorScheme: 'dark',
+      themeParams: { bg_color: '#000000', button_color: '#3390ec', secondary_bg_color: '#181818' },
+      MainButton: {
+        text: '',
+        isVisible: false,
+        isActive: true,
+        setText: () => {},
+        show: () => {},
+        hide: () => {},
+        enable: () => {},
+        disable: () => {},
+        onClick: () => {},
+        offClick: () => {},
+      },
+      ready,
+      expand,
+      close: () => {},
+      onEvent: () => {},
+      offEvent: () => {},
+    },
+  }
+
+  renderHook(() => useTheme())
+
+  expect(readVar('--tg-bg')).toBe('#000000')
+  expect(readVar('--tg-button')).toBe('#3390ec')
+  expect(readVar('--tg-secondary-bg')).toBe('#181818')
+  // A param Telegram did not send still falls back to the default.
+  expect(readVar('--tg-hint')).toBe('#707579')
+  expect(ready).toHaveBeenCalledOnce()
+  expect(expand).toHaveBeenCalledOnce()
+})
+
+it('re-applies the theme when Telegram fires themeChanged, and unsubscribes on cleanup', () => {
+  let themeChangedCallback: (() => void) | undefined
+  const offEvent = vi.fn()
+  const themeParams: Record<string, string> = { bg_color: '#111111' }
+
+  window.Telegram = {
+    WebApp: {
+      initData: '',
+      colorScheme: 'dark',
+      themeParams,
+      MainButton: {
+        text: '',
+        isVisible: false,
+        isActive: true,
+        setText: () => {},
+        show: () => {},
+        hide: () => {},
+        enable: () => {},
+        disable: () => {},
+        onClick: () => {},
+        offClick: () => {},
+      },
+      ready: () => {},
+      expand: () => {},
+      close: () => {},
+      onEvent: (eventType, callback) => {
+        if (eventType === 'themeChanged') themeChangedCallback = callback
+      },
+      offEvent,
+    },
+  }
+
+  const { unmount } = renderHook(() => useTheme())
+
+  expect(readVar('--tg-bg')).toBe('#111111')
+
+  // Telegram updates its own theme params, then notifies the app.
+  themeParams.bg_color = '#222222'
+  themeChangedCallback?.()
+
+  expect(readVar('--tg-bg')).toBe('#222222')
+
+  unmount()
+  expect(offEvent).toHaveBeenCalledWith('themeChanged', themeChangedCallback)
+})

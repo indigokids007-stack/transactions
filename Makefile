@@ -3,7 +3,7 @@ PHP = $(DC) exec -T app php
 PHP_TEST = $(DC) exec -T -e DB_DATABASE=transactions_test app php
 COMPOSER = $(DC) exec -T app composer
 
-.PHONY: up down shell artisan composer migrate fresh test test-db smoke wait-app analyze pint
+.PHONY: up down shell artisan composer migrate fresh test test-db smoke wait-app analyze pint app-dev app-test app-build app-deploy app-lint
 
 up:
 	$(DC) up -d --build
@@ -58,3 +58,22 @@ analyze:
 
 pint:
 	$(PHP) vendor/bin/pint --dirty
+
+# The mini app runs on the host with Node 22, not in Docker, so these targets
+# shell out to npm directly instead of going through $(DC).
+app-dev:
+	cd mini-app && npm run dev
+
+app-test:
+	cd mini-app && npm test
+
+app-build:
+	cd mini-app && npm run build
+
+# Builds the mini app straight into public/app, which Laravel serves on the same origin
+# as the API. Run this on deploy; public/app is a build artefact and is gitignored.
+app-deploy:
+	cd mini-app && VITE_API_BASE_URL= npm run build
+
+app-lint:
+	cd mini-app && npm run lint
