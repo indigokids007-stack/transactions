@@ -100,6 +100,9 @@ it('reaches the api with the chosen category, currency and dimension filters', a
 
   await screen.findByTestId('transaction-1')
 
+  // The category/currency/dimension selects are collapsible, closed by default —
+  // `Filtrlar` opens them (the period picker above stays visible either way).
+  await userEvent.click(screen.getByRole('button', { name: strings.history.filters }))
   await userEvent.selectOptions(screen.getByLabelText(strings.history.category), '7')
   await userEvent.selectOptions(screen.getByLabelText(strings.history.currency), 'USD')
   await userEvent.selectOptions(screen.getByLabelText('Filial'), '9')

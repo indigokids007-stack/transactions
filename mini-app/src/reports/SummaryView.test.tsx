@@ -42,14 +42,7 @@ it('renders one section per currency and never merges their totals', async () =>
 // asserting on the legend text rather than SVG geometry, per the brief's guidance for
 // Recharts under jsdom.
 it('draws each currency chart from its own group rows, not the other currency\'s', async () => {
-  render(
-    <SummaryView
-      client={clientReturning(report)}
-      period={period}
-      chartWidth={320}
-      chartHeight={240}
-    />,
-  )
+  render(<SummaryView client={clientReturning(report)} period={period} />)
 
   const uzs = await screen.findByTestId('currency-UZS')
   const usd = await screen.findByTestId('currency-USD')

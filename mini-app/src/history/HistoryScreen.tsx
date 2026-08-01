@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Filter } from 'lucide-react'
 import type { ApiClient } from '../api/client'
 import type { ApiDimension, ApiUser, Bootstrap } from '../api/types'
 import { usePeriod } from '../reports/usePeriod'
@@ -45,6 +46,7 @@ export function HistoryScreen({ client, bootstrap, user }: HistoryScreenProps) {
   const [currency, setCurrency] = useState<string | undefined>(undefined)
   const [dimensionValues, setDimensionValues] = useState<Record<string, number>>({})
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const filters = useMemo<HistoryFilters>(
     () => ({
@@ -61,33 +63,68 @@ export function HistoryScreen({ client, bootstrap, user }: HistoryScreenProps) {
   const selected = items.find((item) => item.id === selectedId) ?? null
 
   return (
-    <div className="flex flex-col">
-      <Filters
-        period={period}
-        bootstrap={bootstrap}
-        categoryId={categoryId}
-        onCategoryChange={setCategoryId}
-        currency={currency}
-        onCurrencyChange={setCurrency}
-        dimensionValues={dimensionValues}
-        onDimensionChange={(dimension, valueId) =>
-          setDimensionValues((current) => applyDimensionChange(current, dimension, valueId))
-        }
-      />
+    <div className="flex flex-col" style={{ paddingBottom: 130 }}>
+      <div
+        style={{
+          background: 'var(--surface)',
+          padding: 'calc(54px + max(env(safe-area-inset-top), var(--tg-content-safe-top))) 22px 18px',
+          borderRadius: '0 0 28px 28px',
+        }}
+      >
+        <div className="flex items-end justify-between">
+          <h2 className="m-0" style={{ font: '800 26px/1.1 "Plus Jakarta Sans"', color: 'var(--ink)', letterSpacing: '-.02em' }}>
+            {strings.tabs.history}
+          </h2>
+          <button
+            type="button"
+            aria-pressed={filtersOpen}
+            onClick={() => setFiltersOpen((current) => !current)}
+            className="flex items-center gap-[7px] rounded-full"
+            style={{
+              border: 0,
+              padding: '10px 14px',
+              font: '600 12px/1 "Plus Jakarta Sans"',
+              background: filtersOpen ? 'var(--teal-900)' : 'var(--pill-bg)',
+              color: filtersOpen ? '#fff' : 'var(--ink-2)',
+            }}
+          >
+            <Filter size={15} aria-hidden="true" />
+            {strings.history.filters}
+          </button>
+        </div>
 
-      {error ? (
-        <ErrorState message={strings.history.loadFailed} actionLabel={strings.common.retry} onAction={reload} />
-      ) : !loading && items.length === 0 ? (
-        <EmptyState message={strings.history.empty} />
-      ) : (
-        <TransactionList
-          items={items}
-          exponents={bootstrap.currencies}
-          hasMore={hasMore}
-          onLoadMore={() => void loadMore()}
-          onSelect={setSelectedId}
-        />
-      )}
+        <div className="mt-3.5">
+          <Filters
+            open={filtersOpen}
+            period={period}
+            bootstrap={bootstrap}
+            categoryId={categoryId}
+            onCategoryChange={setCategoryId}
+            currency={currency}
+            onCurrencyChange={setCurrency}
+            dimensionValues={dimensionValues}
+            onDimensionChange={(dimension, valueId) =>
+              setDimensionValues((current) => applyDimensionChange(current, dimension, valueId))
+            }
+          />
+        </div>
+      </div>
+
+      <div style={{ padding: '16px 22px 0' }}>
+        {error ? (
+          <ErrorState message={strings.history.loadFailed} actionLabel={strings.common.retry} onAction={reload} />
+        ) : !loading && items.length === 0 ? (
+          <EmptyState message={strings.history.empty} />
+        ) : (
+          <TransactionList
+            items={items}
+            exponents={bootstrap.currencies}
+            hasMore={hasMore}
+            onLoadMore={() => void loadMore()}
+            onSelect={setSelectedId}
+          />
+        )}
+      </div>
 
       {selected ? (
         <TransactionSheet

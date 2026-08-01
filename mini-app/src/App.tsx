@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { SessionState } from './auth/useSession'
 import type { ApiClient } from './api/client'
 import { EntryScreen } from './entry/EntryScreen'
@@ -37,6 +37,16 @@ export function App({ session, onRetry, client }: AppProps) {
   // switch (see the `hidden` panels below), so its period must survive right along with
   // it rather than reset every time the user looks away and back.
   const period = usePeriod()
+  // Mirrors the Add form's own `canSave`/`save`, reported up by `EntryScreen` — see its
+  // `onSaveStateChange` doc comment. Feeds the tab bar's center button so it becomes Save
+  // once the form is valid, in place of switching to a tab that's already showing.
+  const [addSave, setAddSave] = useState<{ canSave: boolean; save: () => void }>({
+    canSave: false,
+    save: () => {},
+  })
+  const handleEntrySaveStateChange = useCallback((canSave: boolean, save: () => void) => {
+    setAddSave({ canSave, save })
+  }, [])
 
   if (session.kind === 'loading') {
     return <EmptyState message={strings.session.loading} />
@@ -70,7 +80,7 @@ export function App({ session, onRetry, client }: AppProps) {
     // details sheet, a long history list) must scroll inside `main` rather than push the
     // tab bar down the page. That keeps the tab bar visible at all times, which is the
     // point of a bottom nav.
-    <div className="fixed inset-0 flex flex-col" style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}>
+    <div className="fixed inset-0 flex flex-col" style={{ background: 'var(--bg)', color: 'var(--ink)' }}>
       <main className="flex-1 overflow-y-auto">
         {TAB_ITEMS.map((item) => (
           <div
@@ -85,7 +95,7 @@ export function App({ session, onRetry, client }: AppProps) {
             hidden={item.id !== tab}
           >
             {item.id === 'add' && client ? (
-              <EntryScreen bootstrap={session.bootstrap} client={client} active={tab === 'add'} />
+              <EntryScreen bootstrap={session.bootstrap} client={client} onSaveStateChange={handleEntrySaveStateChange} />
             ) : item.id === 'reports' && client ? (
               <ReportsScreen
                 user={session.user}
@@ -101,7 +111,12 @@ export function App({ session, onRetry, client }: AppProps) {
           </div>
         ))}
       </main>
-      <Tabs value={tab} onChange={setTab} items={TAB_ITEMS} />
+      <Tabs
+        value={tab}
+        onChange={setTab}
+        items={TAB_ITEMS}
+        addAction={{ enabled: tab === 'add' && addSave.canSave, label: strings.entry.save, onClick: addSave.save }}
+      />
     </div>
   )
 }

@@ -15,33 +15,35 @@ function dimensionName(dimensions: ApiDimension[], dimensionId: number): string 
 // entry, or an owner looking at anyone's. Plain text, not disabled form controls: a
 // disabled `<select>` still looks like a control waiting for permission, where this is
 // the same "view only" fact restated in the field labels the editable form itself uses.
+const rowStyle = { background: 'var(--field)', borderRadius: 18, padding: '14px 16px' }
+const labelStyle = { font: '600 12px/1 "Plus Jakarta Sans"', color: 'var(--muted)' }
+const valueStyle = { font: '700 14px/1 "Plus Jakarta Sans"', color: 'var(--teal-900)' }
+
 export function TransactionSummary({ transaction, dimensions }: TransactionSummaryProps) {
   return (
-    <dl className="space-y-1 text-sm">
-      <div className="flex justify-between gap-2">
-        <dt style={{ color: 'var(--tg-hint)' }}>{strings.entry.type}</dt>
-        <dd>{strings.entry[transaction.type]}</dd>
+    <dl className="flex flex-col gap-[9px]">
+      <div className="flex items-center justify-between" style={rowStyle}>
+        <dt style={labelStyle}>{strings.entry.type}</dt>
+        <dd style={valueStyle}>{strings.entry[transaction.type]}</dd>
       </div>
-      <div className="flex justify-between gap-2">
-        <dt style={{ color: 'var(--tg-hint)' }}>{strings.entry.category}</dt>
-        <dd>{transaction.category.name}</dd>
+      <div className="flex items-center justify-between" style={rowStyle}>
+        <dt style={labelStyle}>{strings.entry.category}</dt>
+        <dd style={valueStyle}>{transaction.category.name}</dd>
       </div>
-      <div className="flex justify-between gap-2">
-        <dt style={{ color: 'var(--tg-hint)' }}>{strings.entry.date}</dt>
-        <dd>{transaction.occurred_on}</dd>
+      <div className="flex items-center justify-between" style={rowStyle}>
+        <dt style={labelStyle}>{strings.entry.date}</dt>
+        <dd style={valueStyle}>{transaction.occurred_on}</dd>
       </div>
       {transaction.note ? (
-        <div className="flex justify-between gap-2">
-          <dt style={{ color: 'var(--tg-hint)' }}>{strings.entry.note}</dt>
-          <dd>{transaction.note}</dd>
+        <div className="flex items-center justify-between" style={rowStyle}>
+          <dt style={labelStyle}>{strings.entry.note}</dt>
+          <dd style={valueStyle}>{transaction.note}</dd>
         </div>
       ) : null}
       {transaction.dimension_values.map((value) => (
-        <div key={value.dimension_id} className="flex justify-between gap-2">
-          <dt style={{ color: 'var(--tg-hint)' }}>
-            {dimensionName(dimensions, value.dimension_id) ?? value.dimension_key}
-          </dt>
-          <dd>{value.value_name}</dd>
+        <div key={value.dimension_id} className="flex items-center justify-between" style={rowStyle}>
+          <dt style={labelStyle}>{dimensionName(dimensions, value.dimension_id) ?? value.dimension_key}</dt>
+          <dd style={valueStyle}>{value.value_name}</dd>
         </div>
       ))}
     </dl>

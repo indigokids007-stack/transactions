@@ -31,6 +31,7 @@ vi.mock('./telegram/webApp', () => ({
     initData: 'test-init-data',
     colorScheme: 'light',
     themeParams: {},
+    contentSafeAreaInset: { top: 0, right: 0, bottom: 0, left: 0 },
     MainButton: {
       text: '',
       isVisible: false,
@@ -46,6 +47,9 @@ vi.mock('./telegram/webApp', () => ({
     ready: vi.fn(),
     expand: vi.fn(),
     close: vi.fn(),
+    requestFullscreen: vi.fn(),
+    disableVerticalSwipes: vi.fn(),
+    enableClosingConfirmation: vi.fn(),
     onEvent: vi.fn(),
     offEvent: vi.fn(),
   })),

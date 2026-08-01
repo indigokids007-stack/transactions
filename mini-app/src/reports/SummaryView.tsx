@@ -13,9 +13,6 @@ export type SummaryViewProps = {
   period: PeriodRange
   /** Every active dimension the group-by switch should offer, alongside category. */
   dimensions?: ApiDimension[]
-  /** Forwarded to `CurrencySection` — see its own doc comment. Only ever set in tests. */
-  chartWidth?: number
-  chartHeight?: number
 }
 
 type CurrencyBucket = {
@@ -46,7 +43,7 @@ function groupByValue(dimensionKey: string): string {
 // so there is nothing here that could sum across them even by accident. Fetching is the
 // one genuine effect: everything else (splitting the response by currency) is derived at
 // render time.
-export function SummaryView({ client, period, dimensions = [], chartWidth, chartHeight }: SummaryViewProps) {
+export function SummaryView({ client, period, dimensions = [] }: SummaryViewProps) {
   const [groupBy, setGroupBy] = useState('category')
 
   const { data: report, failed, rateLimited, retry } = useReportFetch<SummaryReport>(
@@ -57,12 +54,22 @@ export function SummaryView({ client, period, dimensions = [], chartWidth, chart
   const buckets = useMemo(() => (report ? bucketsByCurrency(report) : []), [report])
 
   const groupBySelect = (
-    <label className="block text-sm">
+    <label
+      className="flex items-center justify-between"
+      style={{
+        background: 'var(--surface)',
+        borderRadius: 18,
+        padding: '13px 16px',
+        font: '600 12px/1 "Plus Jakarta Sans"',
+        color: 'var(--muted)',
+        boxShadow: 'var(--shadow-card-sm)',
+      }}
+    >
       {strings.reports.groupBy}
       <select
         value={groupBy}
         onChange={(event) => setGroupBy(event.target.value)}
-        className="mt-1 block w-full rounded border px-2 py-1"
+        style={{ border: 0, background: 'transparent', font: '700 13px/1 "Plus Jakarta Sans"', color: 'var(--teal-900)', outline: 'none', textAlign: 'right' }}
       >
         <option value="category">{strings.reports.category}</option>
         {dimensions.map((dimension) => (
@@ -89,18 +96,11 @@ export function SummaryView({ client, period, dimensions = [], chartWidth, chart
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-3.5" style={{ padding: '16px 22px 130px' }}>
       {groupBySelect}
 
       {buckets.map((bucket) => (
-        <CurrencySection
-          key={bucket.currency}
-          currency={bucket.currency}
-          totals={bucket.totals}
-          groups={bucket.groups}
-          chartWidth={chartWidth}
-          chartHeight={chartHeight}
-        />
+        <CurrencySection key={bucket.currency} currency={bucket.currency} totals={bucket.totals} groups={bucket.groups} />
       ))}
     </div>
   )

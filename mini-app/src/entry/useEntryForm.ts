@@ -76,9 +76,9 @@ export function useEntryForm(bootstrap: Bootstrap, client: ApiClient): EntryForm
   }
 
   // Every branch of a failed save reports through `fieldErrors`/`notice` rather than
-  // rejecting: the caller (a MainButton click, or the fallback button's `onClick`) never
-  // has to `catch` a rejection to give the user a signal, and there is exactly one place
-  // — here — that decides what a given failure means.
+  // rejecting: the caller (the tab bar's save button, via `EntryScreen`) never has to
+  // `catch` a rejection to give the user a signal, and there is exactly one place — here
+  // — that decides what a given failure means.
   async function handleSaveError(error: unknown): Promise<void> {
     const status = readStatus(error)
     const errors = readErrors(error)

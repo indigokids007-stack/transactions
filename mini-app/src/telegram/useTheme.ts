@@ -39,13 +39,28 @@ export function useTheme(): void {
       root.dataset.theme = app.colorScheme
     }
 
+    // Full-screen mode (`requestFullscreen` below) draws Telegram's own header bar
+    // (Close/⋯) over the top of the page — an inset `env(safe-area-inset-top)` alone
+    // doesn't know about, since that's the device's notch/status bar, not Telegram's UI.
+    // Every screen header combines both via `max()` (see e.g. `EntryScreen`'s header
+    // padding), so this only has to keep the Telegram-side number current.
+    function applySafeArea(): void {
+      root.style.setProperty('--tg-content-safe-top', `${app.contentSafeAreaInset.top}px`)
+    }
+
     applyTheme()
+    applySafeArea()
     app.ready()
     app.expand()
+    app.requestFullscreen()
+    app.disableVerticalSwipes()
+    app.enableClosingConfirmation()
 
     app.onEvent('themeChanged', applyTheme)
+    app.onEvent('contentSafeAreaChanged', applySafeArea)
     return () => {
       app.offEvent('themeChanged', applyTheme)
+      app.offEvent('contentSafeAreaChanged', applySafeArea)
     }
   }, [])
 }

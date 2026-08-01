@@ -1,105 +1,189 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Menu } from 'lucide-react'
 import type { ApiClient } from '../api/client'
 import type { Bootstrap } from '../api/types'
 import { strings } from '../strings'
-import { webApp } from '../telegram/webApp'
+import { formatMoneyString } from '../ui/Money'
 import { Toast } from '../ui/Toast'
 import { AmountKeypad } from './AmountKeypad'
 import { CategoryChips } from './CategoryChips'
 import { DetailsSheet } from './DetailsSheet'
+import { parseAmount } from './parseAmount'
 import { useEntryForm } from './useEntryForm'
 
 export type EntryScreenProps = {
   bootstrap: Bootstrap
   client: ApiClient
   /**
-   * Whether the Add tab is the one showing. All three tab panels stay mounted (so each
-   * keeps its own state across a switch — see `App.tsx`), so without this `EntryScreen`
-   * would keep Telegram's MainButton bound and tappable while the user is looking at
-   * Reports or History, saving an entry from a screen they can't see. Defaults to `true`
-   * so a bare `<EntryScreen>` (as most tests render it) behaves the way it always did.
+   * Reports this form's current `canSave` and a stable trigger for `save()` up to
+   * `App.tsx`, which wires them into the bottom tab bar's center button — that button
+   * becomes the save action (in place of switching to this already-active tab) once the
+   * form is valid. `save` itself is a fresh closure on every render of `useEntryForm`
+   * (it reads `values` from that render's closure), so this reports a *stable* trigger
+   * function instead — see this component's body for how — and only re-notifies the
+   * parent when `canSave` actually flips, not on every keystroke.
    */
-  active?: boolean
+  onSaveStateChange?: (canSave: boolean, save: () => void) => void
 }
 
-// The staff expense entry screen: an amount keypad, the category chips, a collapsible
-// details sheet, and a save action. Telegram's MainButton mirrors `canSave` and drives
-// `save()` when the app is embedded; outside Telegram (a browser tab, or a test) an
-// ordinary button takes its place, since there is no MainButton to click there.
-export function EntryScreen({ bootstrap, client, active = true }: EntryScreenProps) {
+// Groups a pure-digit string for display only (`120000` -> `120 000`). A value that
+// isn't all digits (a magnitude word, a typed separator) passes through untouched, so
+// `parseAmount`'s grammar keeps reading the exact characters the user typed.
+function groupDigitsForDisplay(raw: string): string {
+  return /^\d+$/.test(raw) ? raw.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : raw
+}
+
+// The field's `value` is the grouped display string above, so every keystroke's
+// `event.target.value` already carries whichever grouping spaces the last render put
+// there. Stripping whitespace undoes that grouping back to a clean digit run — but only
+// when the result is pure digits: a magnitude word or a `.`-separator amount (`30 ming`,
+// `12,50`) needs its own literal spacing to keep matching `parseAmount`'s grammar, so
+// anything that doesn't collapse to a clean digit run passes through verbatim.
+function amountInputValue(raw: string): string {
+  const stripped = raw.replace(/\s/g, '')
+  return /^\d+$/.test(stripped) ? stripped : raw
+}
+
+// The staff expense entry screen: a gradient amount header with the income/expense
+// toggle, the category chips, a keypad, and the details sheet. There is no save button
+// on this screen itself — the bottom tab bar's center button doubles as Save once the
+// form is valid (`App.tsx`, via `onSaveStateChange` below).
+export function EntryScreen({ bootstrap, client, onSaveStateChange }: EntryScreenProps) {
   const form = useEntryForm(bootstrap, client)
-  const insideTelegram = window.Telegram?.WebApp !== undefined
+  const [detailsOpen, setDetailsOpen] = useState(false)
 
-  // MainButton is Telegram's own chrome, not something this tree renders, so binding and
-  // unbinding its click handler is a genuine effect: it synchronises with an external
-  // system rather than deriving anything from render. While another tab is showing, the
-  // handler is never bound AND the button is hidden — gating the handler alone stops a
-  // save from an invisible screen, but leaves a live-looking "Saqlash" on screen with a
-  // tap that silently does nothing, which is its own confusing failure. `show()`/`setText`
-  // re-run and restore it the moment `active` goes back to `true`.
-  useEffect(() => {
-    const button = webApp().MainButton
+  const parsed = parseAmount(form.values.amountInput)
 
-    if (!active) {
-      button.hide()
-      return
-    }
-
-    button.setText(strings.entry.save)
-    button.show()
-
-    function handleClick(): void {
-      void form.save()
-    }
-
-    button.onClick(handleClick)
-    return () => {
-      button.offClick(handleClick)
-    }
-  }, [form.save, active])
+  // `form.save` is a new closure every render (it closes over that render's `values`),
+  // so reporting it to the parent directly would make the effect below re-fire — and
+  // `onSaveStateChange` re-run — on every keystroke, not just when `canSave` flips. A
+  // ref holds the latest closure; `triggerSave`, with an empty dependency array, never
+  // changes identity, so the parent's own state only updates when `canSave` really does.
+  const saveRef = useRef(form.save)
+  saveRef.current = form.save
+  const triggerSave = useCallback(() => void saveRef.current(), [])
 
   useEffect(() => {
-    const button = webApp().MainButton
-
-    if (!active) {
-      button.disable()
-      return
-    }
-
-    if (form.canSave) {
-      button.enable()
-    } else {
-      button.disable()
-    }
-  }, [form.canSave, active])
+    onSaveStateChange?.(form.canSave, triggerSave)
+  }, [form.canSave, onSaveStateChange, triggerSave])
 
   return (
-    <div className="flex flex-col pb-6">
-      <div className="flex items-baseline justify-center gap-2 p-4">
-        {/* A real text input, not a display span: the approved amount grammar (comma,
-            `k`, `ming`, `mln`, `mlrd`, and their Cyrillic spellings — see `parseAmount`'s
-            doc comment) is typed here directly. `inputMode="decimal"` only hints a
-            numeric-leaning keyboard; the field still accepts the letters that grammar
-            needs, exactly the way a plain `type="text"` would. The keypad below stays as
-            a convenience for the pure-digit case, writing into the same value. */}
-        <input
-          type="text"
-          inputMode="decimal"
-          aria-label={strings.entry.amount}
-          value={form.values.amountInput}
-          onChange={(event) => form.setAmount(event.target.value)}
-          placeholder="0"
-          className="w-48 bg-transparent text-right text-4xl font-semibold tabular-nums outline-none"
-          style={{ color: 'var(--tg-text)' }}
+    <div className="flex flex-col" style={{ paddingBottom: 130 }}>
+      <div
+        style={{
+          background: 'var(--grad-header)',
+          padding: 'calc(56px + max(env(safe-area-inset-top), var(--tg-content-safe-top))) 22px 26px',
+          borderRadius: '0 0 34px 34px',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            width: 230,
+            height: 230,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,.09)',
+            top: -120,
+            right: -70,
+          }}
         />
-        <span className="text-lg opacity-70">{form.values.currency}</span>
-      </div>
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            width: 150,
+            height: 150,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,.07)',
+            bottom: -90,
+            left: -40,
+          }}
+        />
 
-      {form.amountInvalid ? (
-        <p role="alert" className="px-4 text-center text-sm" style={{ color: 'var(--tg-hint)' }}>
-          {strings.entry.invalidAmount}
-        </p>
-      ) : null}
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ font: '500 12px/1 "Plus Jakarta Sans"', color: 'rgba(255,255,255,.72)', letterSpacing: '.04em' }}>
+              {strings.tabs.add}
+            </div>
+            <div style={{ font: '700 19px/1.2 "Plus Jakarta Sans"', color: '#fff', marginTop: 5 }}>
+              {strings.entry.newEntry}
+            </div>
+          </div>
+          <div role="group" aria-label={strings.entry.type} style={{ display: 'flex', background: 'rgba(255,255,255,.16)', borderRadius: 999, padding: 3 }}>
+            {(['expense', 'income'] as const).map((type) => {
+              const selected = form.values.type === type
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => form.setType(type)}
+                  className="rounded-full"
+                  style={{
+                    border: 0,
+                    padding: '9px 13px',
+                    font: '600 12px/1 "Plus Jakarta Sans"',
+                    background: selected ? '#ffffff' : 'transparent',
+                    color: selected ? 'var(--teal-900)' : 'rgba(255,255,255,.85)',
+                  }}
+                >
+                  {strings.entry[type]}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div style={{ position: 'relative', marginTop: 26, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', gap: 9 }}>
+          {/* A real text input, not a display span: the approved amount grammar (comma,
+              `k`, `ming`, `mln`, `mlrd`, and their Cyrillic spellings — see `parseAmount`'s
+              doc comment) is typed here directly. `inputMode="decimal"` only hints a
+              numeric-leaning keyboard; the field still accepts the letters that grammar
+              needs, exactly the way a plain `type="text"` would. The keypad below stays as
+              a convenience for the pure-digit case, writing into the same value. */}
+          <input
+            type="text"
+            inputMode="decimal"
+            aria-label={strings.entry.amount}
+            value={groupDigitsForDisplay(form.values.amountInput)}
+            onChange={(event) => form.setAmount(amountInputValue(event.target.value))}
+            placeholder="0"
+            style={{
+              width: 250,
+              background: 'transparent',
+              border: 0,
+              outline: 'none',
+              textAlign: 'right',
+              font: '800 46px/1 "Plus Jakarta Sans"',
+              color: '#fff',
+              fontVariantNumeric: 'tabular-nums',
+              letterSpacing: '-.02em',
+            }}
+          />
+          <span style={{ font: '600 15px/1 "Plus Jakarta Sans"', color: 'rgba(255,255,255,.7)', paddingBottom: 6 }}>
+            {form.values.currency}
+          </span>
+        </div>
+        <div
+          style={{
+            position: 'relative',
+            height: 16,
+            marginTop: 6,
+            textAlign: 'right',
+            font: '500 11px/1 "Plus Jakarta Sans"',
+            color: form.amountInvalid ? '#ffd9c9' : 'rgba(255,255,255,.55)',
+          }}
+        >
+          {form.amountInvalid ? (
+            <span role="alert">{strings.entry.invalidAmount}</span>
+          ) : parsed ? (
+            `${formatMoneyString(parsed.amount)} so'm`
+          ) : null}
+        </div>
+      </div>
 
       <CategoryChips
         categories={form.categories}
@@ -111,43 +195,60 @@ export function EntryScreen({ bootstrap, client, active = true }: EntryScreenPro
 
       <AmountKeypad value={form.values.amountInput} onChange={form.setAmount} />
 
-      <DetailsSheet
-        values={form.values}
-        dimensions={form.dimensions}
-        currencies={form.currencies}
-        missingRequired={form.missingRequired}
-        onTypeChange={form.setType}
-        onCurrencyChange={form.setCurrency}
-        onDateChange={form.setDate}
-        onNoteChange={form.setNote}
-        onDimensionChange={form.setDimension}
-      />
+      <div style={{ display: 'flex', gap: 10, padding: '8px 22px 0' }}>
+        <button
+          type="button"
+          aria-expanded={detailsOpen}
+          onClick={() => setDetailsOpen(true)}
+          style={{
+            flex: '0 0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 7,
+            border: `1.5px solid ${form.missingRequired.length > 0 ? '#f6cfae' : 'var(--line-2)'}`,
+            background: 'var(--surface)',
+            borderRadius: 20,
+            padding: '16px 18px',
+            font: '600 13px/1 "Plus Jakarta Sans"',
+            color: 'var(--teal-900)',
+          }}
+        >
+          <Menu size={16} aria-hidden="true" />
+          {strings.entry.details}
+          {form.missingRequired.length > 0 ? (
+            <span
+              aria-hidden="true"
+              style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--coral-600)', display: 'inline-block' }}
+            />
+          ) : null}
+        </button>
+      </div>
 
       {form.notice ? (
-        <p role="alert" className="px-4 py-2 text-sm" style={{ color: 'var(--tg-hint)' }}>
+        <p role="alert" className="px-[22px] py-2 text-sm" style={{ color: 'var(--muted)' }}>
           {form.notice}
         </p>
       ) : null}
 
       {Object.keys(form.fieldErrors).length > 0 ? (
-        <ul role="alert" className="space-y-1 px-4 py-2 text-sm" style={{ color: 'var(--tg-hint)' }}>
+        <ul role="alert" className="space-y-1 px-[22px] py-2 text-sm" style={{ color: 'var(--muted)' }}>
           {Object.entries(form.fieldErrors).map(([field, messages]) => (
             <li key={field}>{messages[0]}</li>
           ))}
         </ul>
       ) : null}
 
-      {!insideTelegram ? (
-        <button
-          type="button"
-          disabled={!form.canSave}
-          onClick={() => void form.save()}
-          className="mx-4 mt-2 rounded-full py-3 text-center font-semibold disabled:opacity-50"
-          style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
-        >
-          {strings.entry.save}
-        </button>
-      ) : null}
+      <DetailsSheet
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        values={form.values}
+        dimensions={form.dimensions}
+        currencies={form.currencies}
+        onCurrencyChange={form.setCurrency}
+        onDateChange={form.setDate}
+        onNoteChange={form.setNote}
+        onDimensionChange={form.setDimension}
+      />
 
       {form.lastSaved ? (
         <Toast

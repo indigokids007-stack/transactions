@@ -16,41 +16,53 @@ type TransactionHeaderProps = {
 // "hide the amount", only "don't offer to change it" — the same reasoning that keeps the
 // currency visible here after Fix 2 removed it as an editable control.
 export function TransactionHeader({ transaction, exponents, revisionState }: TransactionHeaderProps) {
+  const income = transaction.type === 'income'
   return (
-    <dl className="space-y-1 border-b pb-3 text-sm" style={{ borderColor: 'var(--tg-hint)' }}>
-      <div className="flex items-center justify-between gap-2">
-        <dt style={{ color: 'var(--tg-hint)' }}>{strings.entry.amount}</dt>
-        <dd className="text-lg font-semibold">
-          <Money minor={transaction.amount_minor} currency={transaction.currency} exponents={exponents} />
-        </dd>
-      </div>
-      <div className="flex justify-between gap-2">
-        <dt style={{ color: 'var(--tg-hint)' }}>{strings.history.person}</dt>
-        <dd>{transaction.user.name}</dd>
-      </div>
-      <div className="flex justify-between gap-2">
-        <dt style={{ color: 'var(--tg-hint)' }}>{strings.history.department}</dt>
-        <dd>{transaction.department?.name ?? strings.history.noDepartment}</dd>
-      </div>
-      <div className="flex items-center justify-between gap-2">
-        <dt style={{ color: 'var(--tg-hint)' }}>{strings.history.revisions}</dt>
-        <dd data-testid="revision-count">
+    <div>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div
+            style={{
+              font: '800 26px/1 "Plus Jakarta Sans"',
+              color: income ? 'var(--income)' : 'var(--expense)',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {income ? '+' : String.fromCharCode(0x2212)}
+            <Money minor={transaction.amount_minor} currency={transaction.currency} exponents={exponents} />
+          </div>
+          <div className="mt-1.5" style={{ font: '500 12px/1 "Plus Jakarta Sans"', color: 'var(--muted)' }}>
+            {strings.entry[transaction.type]} · {transaction.department?.name ?? transaction.user.name}
+          </div>
+        </div>
+        <span
+          data-testid="revision-count"
+          style={{ font: '600 11px/1 "Plus Jakarta Sans"', color: 'var(--ink-2)', background: 'var(--pill-bg)', padding: '8px 11px', borderRadius: 999 }}
+        >
+          {`${strings.history.revisions}: `}
           {revisionState.status === 'loading' ? strings.history.revisionsLoading : null}
           {revisionState.status === 'loaded' ? revisionState.count : null}
           {revisionState.status === 'failed' ? (
             <span className="inline-flex items-center gap-2">
-              <span style={{ color: 'var(--tg-hint)' }}>{strings.history.revisionsFailed}</span>
-              <button
-                type="button"
-                onClick={revisionState.retry}
-                className="underline"
-              >
+              <span>{strings.history.revisionsFailed}</span>
+              <button type="button" onClick={revisionState.retry} className="underline">
                 {strings.common.retry}
               </button>
             </span>
           ) : null}
-        </dd>
+        </span>
       </div>
-    </dl>
+
+      <dl className="mt-3.5 space-y-1.5" style={{ font: '600 12px/1 "Plus Jakarta Sans"' }}>
+        <div className="flex justify-between gap-2">
+          <dt style={{ color: 'var(--muted)' }}>{strings.history.person}</dt>
+          <dd style={{ color: 'var(--ink-2)' }}>{transaction.user.name}</dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt style={{ color: 'var(--muted)' }}>{strings.history.department}</dt>
+          <dd style={{ color: 'var(--ink-2)' }}>{transaction.department?.name ?? strings.history.noDepartment}</dd>
+        </div>
+      </dl>
+    </div>
   )
 }

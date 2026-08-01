@@ -46,3 +46,43 @@ it('renders the add tab as a raised button with no visible text label', () => {
   expect(addTab).toHaveAttribute('aria-label', 'Kiritish')
   expect(addTab.textContent?.trim()).toBe('')
 })
+
+it('still switches to the add tab on click when addAction is disabled', async () => {
+  const onChange = vi.fn()
+  const user = userEvent.setup()
+  render(
+    <Tabs
+      value="reports"
+      onChange={onChange}
+      items={items}
+      addAction={{ enabled: false, label: 'Saqlash', onClick: vi.fn() }}
+    />,
+  )
+
+  await user.click(screen.getByRole('tab', { name: 'Kiritish' }))
+
+  expect(onChange).toHaveBeenCalledWith('add')
+})
+
+// Once the Add form is valid, the center button becomes Save instead of a tab switch —
+// `App.tsx` wires this to `EntryScreen`'s `canSave`/`save`.
+it('takes over the add tab as a save action once addAction is enabled', async () => {
+  const onChange = vi.fn()
+  const onSave = vi.fn()
+  const user = userEvent.setup()
+  render(
+    <Tabs
+      value="add"
+      onChange={onChange}
+      items={items}
+      addAction={{ enabled: true, label: 'Saqlash', onClick: onSave }}
+    />,
+  )
+
+  const addTab = screen.getByRole('tab', { name: 'Saqlash' })
+  await user.click(addTab)
+
+  expect(onSave).toHaveBeenCalledOnce()
+  // A save, not a tab switch — the parent already knows `value` is `add`.
+  expect(onChange).not.toHaveBeenCalled()
+})

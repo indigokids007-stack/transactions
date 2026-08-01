@@ -12,15 +12,15 @@ export function ErrorState({ message, actionLabel, onAction }: ErrorStateProps) 
     <div
       role="alert"
       className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center"
-      style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
+      style={{ background: 'var(--bg)', color: 'var(--ink)' }}
     >
       <p>{message}</p>
       {actionLabel && onAction ? (
         <button
           type="button"
           onClick={onAction}
-          className="rounded-full px-4 py-2"
-          style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
+          className="rounded-full"
+          style={{ border: 0, padding: '10px 16px', background: 'var(--grad-action)', color: '#fff', boxShadow: 'var(--shadow-action)' }}
         >
           {actionLabel}
         </button>

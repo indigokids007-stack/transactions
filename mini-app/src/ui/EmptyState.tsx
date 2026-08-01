@@ -9,7 +9,7 @@ export function EmptyState({ message }: EmptyStateProps) {
   return (
     <div
       className="flex min-h-screen flex-col items-center justify-center p-6 text-center"
-      style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
+      style={{ background: 'var(--bg)', color: 'var(--ink)' }}
     >
       <p>{message}</p>
     </div>

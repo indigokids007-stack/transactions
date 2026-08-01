@@ -16,9 +16,13 @@ const TYPES = ['expense', 'income'] as const
 // down, the same way `DetailsSheet` holds the entry form's own fields separately from
 // `EntryScreen`. Amount and currency are not here: see `transactionEdit.ts`'s doc comment
 // for why — the currency control is `TransactionSheet`'s read-only header instead.
+const rowStyle = { background: 'var(--field)', borderRadius: 18, padding: '14px 16px' }
+const labelStyle = { font: '600 12px/1 "Plus Jakarta Sans"', color: 'var(--muted)' }
+const valueStyle = { border: 0, background: 'transparent', font: '700 14px/1 "Plus Jakarta Sans"', color: 'var(--teal-900)', outline: 'none', textAlign: 'right' as const }
+
 export function TransactionFields({ values, bootstrap, onChange }: TransactionFieldsProps) {
   return (
-    <>
+    <div className="flex flex-col gap-[9px]">
       <div role="group" aria-label={strings.entry.type} className="flex gap-2">
         {TYPES.map((type) => (
           <button
@@ -26,10 +30,13 @@ export function TransactionFields({ values, bootstrap, onChange }: TransactionFi
             type="button"
             aria-pressed={values.type === type}
             onClick={() => onChange({ type })}
-            className="rounded-full px-3 py-1 text-sm"
+            className="rounded-full"
             style={{
-              background: values.type === type ? 'var(--accent)' : 'var(--tg-secondary-bg)',
-              color: values.type === type ? 'var(--accent-text)' : 'var(--tg-text)',
+              border: 0,
+              padding: '9px 13px',
+              font: '600 12px/1 "Plus Jakarta Sans"',
+              background: values.type === type ? 'var(--teal-900)' : 'var(--pill-bg)',
+              color: values.type === type ? '#fff' : 'var(--ink-2)',
             }}
           >
             {strings.entry[type]}
@@ -37,12 +44,12 @@ export function TransactionFields({ values, bootstrap, onChange }: TransactionFi
         ))}
       </div>
 
-      <label className="block text-sm">
-        {strings.entry.category}
+      <label className="flex items-center justify-between" style={rowStyle}>
+        <span style={labelStyle}>{strings.entry.category}</span>
         <select
           value={values.categoryId}
           onChange={(event) => onChange({ categoryId: Number(event.target.value) })}
-          className="mt-1 block w-full rounded border px-2 py-1"
+          style={valueStyle}
         >
           {flattenCategories(bootstrap.categories).map((category) => (
             <option key={category.id} value={category.id}>
@@ -52,35 +59,36 @@ export function TransactionFields({ values, bootstrap, onChange }: TransactionFi
         </select>
       </label>
 
-      <label className="block text-sm">
-        {strings.entry.date}
+      <label className="flex items-center justify-between" style={rowStyle}>
+        <span style={labelStyle}>{strings.entry.date}</span>
         <input
           type="date"
           value={values.occurredOn}
           onChange={(event) => onChange({ occurredOn: event.target.value })}
-          className="mt-1 block w-full rounded border px-2 py-1"
+          style={valueStyle}
         />
       </label>
 
-      <label className="block text-sm">
-        {strings.entry.note}
+      <label className="block" style={rowStyle}>
+        <span style={labelStyle}>{strings.entry.note}</span>
         <input
           type="text"
           value={values.note}
           onChange={(event) => onChange({ note: event.target.value })}
-          className="mt-1 block w-full rounded border px-2 py-1"
+          className="mt-2 block w-full"
+          style={{ border: 0, background: 'transparent', font: '600 14px/1 "Plus Jakarta Sans"', color: 'var(--ink)', outline: 'none' }}
         />
       </label>
 
       {bootstrap.dimensions.map((dimension) => (
-        <label key={dimension.id} className="block text-sm">
-          {dimension.name}
+        <label key={dimension.id} className="flex items-center justify-between" style={rowStyle}>
+          <span style={labelStyle}>{dimension.name}</span>
           <select
             value={values.dimensionValues[dimension.id] ?? ''}
             onChange={(event) =>
               onChange({ dimensionValues: { ...values.dimensionValues, [dimension.id]: Number(event.target.value) } })
             }
-            className="mt-1 block w-full rounded border px-2 py-1"
+            style={valueStyle}
           >
             <option value="" disabled>
               {strings.entry.choose}
@@ -93,6 +101,6 @@ export function TransactionFields({ values, bootstrap, onChange }: TransactionFi
           </select>
         </label>
       ))}
-    </>
+    </div>
   )
 }

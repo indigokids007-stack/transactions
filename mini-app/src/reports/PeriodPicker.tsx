@@ -10,8 +10,8 @@ const PRESETS = ['this-month', 'last-month'] as const
 
 function chipStyle(selected: boolean): { background: string; color: string } {
   return {
-    background: selected ? 'var(--accent)' : 'var(--tg-secondary-bg)',
-    color: selected ? 'var(--accent-text)' : 'var(--tg-text)',
+    background: selected ? 'var(--teal-900)' : 'var(--pill-bg)',
+    color: selected ? '#ffffff' : 'var(--ink-2)',
   }
 }
 
@@ -47,8 +47,8 @@ export function PeriodPicker({ period }: PeriodPickerProps) {
   }
 
   return (
-    <div className="flex flex-col gap-3 px-4 py-2">
-      <div role="group" aria-label={strings.reports.period} className="flex gap-2">
+    <div className="flex flex-col gap-3">
+      <div role="group" aria-label={strings.reports.period} className="flex flex-wrap gap-[7px]">
         {PRESETS.map((preset) => {
           const selected = period.preset === preset
           return (
@@ -57,8 +57,8 @@ export function PeriodPicker({ period }: PeriodPickerProps) {
               type="button"
               aria-pressed={selected}
               onClick={() => period.setPreset(preset)}
-              className="rounded-full px-3 py-1 text-sm"
-              style={chipStyle(selected)}
+              className="rounded-full"
+              style={{ ...chipStyle(selected), border: 0, padding: '9px 14px', font: '600 12px/1 "Plus Jakarta Sans"' }}
             >
               {strings.reports[preset === 'this-month' ? 'thisMonth' : 'lastMonth']}
             </button>
@@ -68,8 +68,8 @@ export function PeriodPicker({ period }: PeriodPickerProps) {
           type="button"
           aria-pressed={period.preset === 'custom'}
           onClick={() => applyCustomRange(customFrom, customTo)}
-          className="rounded-full px-3 py-1 text-sm"
-          style={chipStyle(period.preset === 'custom')}
+          className="rounded-full"
+          style={{ ...chipStyle(period.preset === 'custom'), border: 0, padding: '9px 14px', font: '600 12px/1 "Plus Jakarta Sans"' }}
         >
           {strings.reports.customRange}
         </button>
@@ -77,23 +77,39 @@ export function PeriodPicker({ period }: PeriodPickerProps) {
 
       {period.preset === 'custom' && (
         <div className="flex flex-col gap-3">
-          <div className="flex gap-3">
-            <label className="block text-sm">
+          <div className="flex gap-[10px]">
+            <label className="flex-1" style={{ font: '500 11px/1 "Plus Jakarta Sans"', color: 'var(--muted)' }}>
               {strings.reports.rangeFrom}
               <input
                 type="date"
                 value={customFrom}
                 onChange={(event) => applyCustomRange(event.target.value, customTo)}
-                className="mt-1 block w-full rounded border px-2 py-1"
+                className="mt-1.5 block w-full"
+                style={{
+                  border: '1.5px solid #dceae4',
+                  borderRadius: 14,
+                  padding: '10px 12px',
+                  font: '600 13px/1 "Plus Jakarta Sans"',
+                  color: 'var(--ink)',
+                  background: 'var(--surface)',
+                }}
               />
             </label>
-            <label className="block text-sm">
+            <label className="flex-1" style={{ font: '500 11px/1 "Plus Jakarta Sans"', color: 'var(--muted)' }}>
               {strings.reports.rangeTo}
               <input
                 type="date"
                 value={customTo}
                 onChange={(event) => applyCustomRange(customFrom, event.target.value)}
-                className="mt-1 block w-full rounded border px-2 py-1"
+                className="mt-1.5 block w-full"
+                style={{
+                  border: '1.5px solid #dceae4',
+                  borderRadius: 14,
+                  padding: '10px 12px',
+                  font: '600 13px/1 "Plus Jakarta Sans"',
+                  color: 'var(--ink)',
+                  background: 'var(--surface)',
+                }}
               />
             </label>
           </div>

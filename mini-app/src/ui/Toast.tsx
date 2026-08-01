@@ -27,12 +27,27 @@ export function Toast({ message, action, onAction, onDismiss, duration = DEFAULT
   return (
     <div
       role="status"
-      className="fixed inset-x-4 bottom-20 flex items-center justify-between gap-4 rounded-xl px-4 py-3 shadow-lg"
-      style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
+      className="absolute z-10 flex items-center justify-between"
+      style={{
+        left: 22,
+        right: 22,
+        bottom: 110,
+        gap: 12,
+        background: 'var(--teal-900)',
+        borderRadius: 20,
+        padding: '15px 18px',
+        boxShadow: 'var(--shadow-toast)',
+        animation: 'toastIn .22s ease-out',
+      }}
     >
-      <span>{message}</span>
+      <span style={{ font: '600 13px/1 "Plus Jakarta Sans"', color: '#fff' }}>{message}</span>
       {action && onAction ? (
-        <button type="button" onClick={onAction} className="font-semibold underline">
+        <button
+          type="button"
+          onClick={onAction}
+          className="rounded-full"
+          style={{ border: 0, background: 'rgba(255,255,255,.16)', color: '#9fe8d3', padding: '8px 14px', font: '700 12px/1 "Plus Jakarta Sans"' }}
+        >
           {action}
         </button>
       ) : null}

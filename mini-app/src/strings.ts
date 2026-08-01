@@ -23,8 +23,12 @@ export const strings = {
     delete: "O'chirish",
     confirm: 'Tasdiqlash',
     cancel: 'Bekor qilish',
+    // The ✕ button on a bottom sheet (details sheet, transaction sheet).
+    close: 'Yopish',
   },
   entry: {
+    // The entry screen's gradient-header title, above the amount field.
+    newEntry: 'Yangi yozuv',
     amount: 'Summa',
     category: 'Turkum',
     details: 'Batafsil',
@@ -50,6 +54,9 @@ export const strings = {
     // Mirrors the Telegram bot's own `unparseable` wording (lang/uz/bot.php) so the same
     // grammar failure reads the same way in both surfaces.
     invalidAmount: "Summani tushunmadim. Masalan: 120000, 12.500, 30 ming.",
+    // Closes the details sheet — a full-width confirmation button, not a save action
+    // (the form isn't submitted until Saqlash on the entry screen itself).
+    done: 'Tayyor',
   },
   reports: {
     period: 'Davr',
@@ -86,8 +93,12 @@ export const strings = {
     // The pie chart's 9th+ category, folded into one slice so the chart never exceeds
     // the validated 8-slot color order (dataviz skill).
     other: 'Boshqa',
+    // The donut's centered total label.
+    total: 'Jami',
   },
   history: {
+    // The collapsible filter panel's toggle button, next to the screen title.
+    filters: 'Filtrlar',
     // Filter labels: `category`/`currency` reuse the same words as the entry form's
     // fields, since they name the same concepts; only the "all X" options below are new.
     category: 'Turkum',

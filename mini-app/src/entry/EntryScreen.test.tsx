@@ -4,15 +4,24 @@ import { EntryScreen } from './EntryScreen'
 import { strings } from '../strings'
 import { bootstrapFixture, clientStub } from '../test/fixtures'
 
+// `EntryScreen` no longer owns a save button itself — the bottom tab bar's center
+// button becomes Save once the form is valid (`App.tsx`), reached here through
+// `onSaveStateChange`. This captures the latest `canSave`/`save` it reports, the same
+// pair `App.tsx` wires into `Tabs`' `addAction`, so a test can trigger a save (or assert
+// it's withheld) without a DOM button to click.
+function captureSaveState() {
+  const state: { canSave: boolean; save: () => void } = { canSave: false, save: () => {} }
+  const onSaveStateChange = (canSave: boolean, save: () => void) => {
+    state.canSave = canSave
+    state.save = save
+  }
+  return { state, onSaveStateChange }
+}
+
 async function fillValidAmountAndDimension() {
   await userEvent.click(screen.getByRole('button', { name: '1' }))
   await userEvent.click(screen.getByRole('button', { name: strings.entry.details }))
   await userEvent.selectOptions(screen.getByLabelText('Filial'), '9')
-}
-
-async function enterValidTransaction() {
-  await fillValidAmountAndDimension()
-  await userEvent.click(screen.getByRole('button', { name: strings.entry.save }))
 }
 
 // The grammar `parseAmount` accepts is reachable only through a real text input; typing
@@ -20,11 +29,13 @@ async function enterValidTransaction() {
 // keypad (which never offered a way to type either).
 it('saves a magnitude word typed into the amount field as its multiplied value', async () => {
   const client = clientStub()
-  render(<EntryScreen bootstrap={bootstrapFixture} client={client} />)
+  const capture = captureSaveState()
+  render(<EntryScreen bootstrap={bootstrapFixture} client={client} onSaveStateChange={capture.onSaveStateChange} />)
 
   await userEvent.type(screen.getByLabelText(strings.entry.amount), '30 ming')
+  await userEvent.click(screen.getByRole('button', { name: strings.entry.details }))
   await userEvent.selectOptions(screen.getByLabelText('Filial'), '9')
-  await userEvent.click(screen.getByRole('button', { name: strings.entry.save }))
+  capture.state.save()
 
   expect(client.createTransaction).toHaveBeenCalledWith(
     expect.objectContaining({ amount: '30000' }),
@@ -34,11 +45,13 @@ it('saves a magnitude word typed into the amount field as its multiplied value',
 
 it('saves a comma-separated amount typed into the amount field padded to its group', async () => {
   const client = clientStub()
-  render(<EntryScreen bootstrap={bootstrapFixture} client={client} />)
+  const capture = captureSaveState()
+  render(<EntryScreen bootstrap={bootstrapFixture} client={client} onSaveStateChange={capture.onSaveStateChange} />)
 
   await userEvent.type(screen.getByLabelText(strings.entry.amount), '12,50')
+  await userEvent.click(screen.getByRole('button', { name: strings.entry.details }))
   await userEvent.selectOptions(screen.getByLabelText('Filial'), '9')
-  await userEvent.click(screen.getByRole('button', { name: strings.entry.save }))
+  capture.state.save()
 
   expect(client.createTransaction).toHaveBeenCalledWith(
     expect.objectContaining({ amount: '12500' }),
@@ -50,28 +63,55 @@ it('shows a hint instead of saving when the amount does not parse', async () => 
   const client = clientStub()
   render(<EntryScreen bootstrap={bootstrapFixture} client={client} />)
 
-  await userEvent.type(screen.getByLabelText(strings.entry.amount), '100 000')
+  await userEvent.type(screen.getByLabelText(strings.entry.amount), 'abc')
 
   expect(await screen.findByText(strings.entry.invalidAmount)).toBeInTheDocument()
   expect(client.createTransaction).not.toHaveBeenCalled()
 })
 
-it('names the required dimension instead of saving', async () => {
+// The amount field is now a space-grouped display: `event.target.value` at each
+// keystroke already carries the previous render's grouping spaces, so this asserts on
+// what reaches `setAmount` (via the saved payload), not on the field's DOM value.
+it('saves a space-grouped digit amount as its plain digit value', async () => {
   const client = clientStub()
-  render(<EntryScreen bootstrap={bootstrapFixture} client={client} />)
+  const capture = captureSaveState()
+  render(<EntryScreen bootstrap={bootstrapFixture} client={client} onSaveStateChange={capture.onSaveStateChange} />)
+
+  await userEvent.type(screen.getByLabelText(strings.entry.amount), '120000')
+  await userEvent.click(screen.getByRole('button', { name: strings.entry.details }))
+  await userEvent.selectOptions(screen.getByLabelText('Filial'), '9')
+  capture.state.save()
+
+  expect(client.createTransaction).toHaveBeenCalledWith(
+    expect.objectContaining({ amount: '120000' }),
+    expect.any(String),
+  )
+})
+
+// The forced-open sheet was replaced by a coral dot on the Batafsil trigger; the reported
+// `canSave` (unchanged, from `useEntryForm`) is still the one gate, now read by `App.tsx`
+// instead of a button's own `disabled` attribute.
+it('keeps canSave false and marks Batafsil while a required dimension is unanswered', async () => {
+  const client = clientStub()
+  const capture = captureSaveState()
+  render(<EntryScreen bootstrap={bootstrapFixture} client={client} onSaveStateChange={capture.onSaveStateChange} />)
 
   await userEvent.click(screen.getByRole('button', { name: '1' }))
-  await userEvent.click(screen.getByRole('button', { name: strings.entry.save }))
 
-  expect(screen.getByText(/Filial/)).toBeInTheDocument()
+  expect(capture.state.canSave).toBe(false)
+
+  capture.state.save()
   expect(client.createTransaction).not.toHaveBeenCalled()
 })
 
 it('offers undo after a save and deletes on tap', async () => {
   const client = clientStub()
-  render(<EntryScreen bootstrap={bootstrapFixture} client={client} />)
+  const capture = captureSaveState()
+  render(<EntryScreen bootstrap={bootstrapFixture} client={client} onSaveStateChange={capture.onSaveStateChange} />)
 
-  await enterValidTransaction()
+  await fillValidAmountAndDimension()
+  capture.state.save()
+
   await userEvent.click(await screen.findByRole('button', { name: strings.entry.undo }))
 
   expect(client.deleteTransaction).toHaveBeenCalledWith(1)
@@ -83,9 +123,11 @@ it('reloads the reference data when the api rejects a stale category', async () 
     status: 422,
     errors: { category_id: ['The selected category_id is invalid.'] },
   })
-  render(<EntryScreen bootstrap={bootstrapFixture} client={client} />)
+  const capture = captureSaveState()
+  render(<EntryScreen bootstrap={bootstrapFixture} client={client} onSaveStateChange={capture.onSaveStateChange} />)
 
-  await enterValidTransaction()
+  await fillValidAmountAndDimension()
+  capture.state.save()
 
   expect(await screen.findByText(strings.entry.referenceChanged)).toBeInTheDocument()
   expect(client.bootstrap).toHaveBeenCalled()
@@ -100,9 +142,11 @@ it('shows a 422 field error inline instead of doing nothing', async () => {
     status: 422,
     errors: { note: ['Note is too long.'] },
   })
-  render(<EntryScreen bootstrap={bootstrapFixture} client={client} />)
+  const capture = captureSaveState()
+  render(<EntryScreen bootstrap={bootstrapFixture} client={client} onSaveStateChange={capture.onSaveStateChange} />)
 
-  await enterValidTransaction()
+  await fillValidAmountAndDimension()
+  capture.state.save()
 
   expect(await screen.findByText('Note is too long.')).toBeInTheDocument()
 })
@@ -110,102 +154,29 @@ it('shows a 422 field error inline instead of doing nothing', async () => {
 it('shows a generic failure notice when a non-422 save fails', async () => {
   const client = clientStub()
   client.createTransaction = vi.fn().mockRejectedValue(new Error('network exploded'))
-  render(<EntryScreen bootstrap={bootstrapFixture} client={client} />)
+  const capture = captureSaveState()
+  render(<EntryScreen bootstrap={bootstrapFixture} client={client} onSaveStateChange={capture.onSaveStateChange} />)
 
-  await enterValidTransaction()
+  await fillValidAmountAndDimension()
+  capture.state.save()
 
   expect(await screen.findByText(strings.entry.saveFailed)).toBeInTheDocument()
 })
 
-describe('MainButton gating while another tab is showing', () => {
-  afterEach(() => {
-    delete (window as { Telegram?: unknown }).Telegram
-  })
+// `onSaveStateChange` reports a *stable* trigger (see `EntryScreen`'s doc comment) — this
+// pins that stability, since a save button implemented as a fresh closure per keystroke
+// would make `App.tsx`'s `useEffect` (and its `Tabs` re-render) fire on every keystroke
+// instead of only when `canSave` flips.
+it('reports the same save function across renders that do not change canSave', async () => {
+  const capture = captureSaveState()
+  render(<EntryScreen bootstrap={bootstrapFixture} client={clientStub()} onSaveStateChange={capture.onSaveStateChange} />)
 
-  function stubMainButton() {
-    const mainButton = {
-      text: '',
-      isVisible: false,
-      isActive: true,
-      setText: vi.fn(),
-      show: vi.fn(),
-      hide: vi.fn(),
-      enable: vi.fn(),
-      disable: vi.fn(),
-      onClick: vi.fn(),
-      offClick: vi.fn(),
-    }
-    window.Telegram = {
-      WebApp: {
-        initData: '',
-        colorScheme: 'light',
-        themeParams: {},
-        MainButton: mainButton,
-        ready: vi.fn(),
-        expand: vi.fn(),
-        close: vi.fn(),
-        onEvent: vi.fn(),
-        offEvent: vi.fn(),
-      },
-    }
-    return mainButton
-  }
+  const firstSave = capture.state.save
+  // Typing a digit re-renders the form (a new `amountInput`) without making `canSave`
+  // true (no dimension chosen yet) — the case that would leak a fresh closure per
+  // keystroke if `save` weren't wrapped behind a stable ref.
+  await userEvent.click(screen.getByRole('button', { name: '1' }))
 
-  it('never binds the click handler while the screen is inactive', () => {
-    const mainButton = stubMainButton()
-
-    render(<EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={false} />)
-
-    expect(mainButton.onClick).not.toHaveBeenCalled()
-  })
-
-  it('unbinds the handler the moment the screen becomes inactive', () => {
-    const mainButton = stubMainButton()
-
-    const { rerender } = render(
-      <EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={true} />,
-    )
-    expect(mainButton.onClick).toHaveBeenCalledTimes(1)
-    const boundHandler = mainButton.onClick.mock.calls[0][0]
-
-    rerender(<EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={false} />)
-
-    expect(mainButton.offClick).toHaveBeenCalledWith(boundHandler)
-  })
-
-  it('hides the button while inactive and shows it again when the tab returns', () => {
-    const mainButton = stubMainButton()
-
-    const { rerender } = render(
-      <EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={true} />,
-    )
-    expect(mainButton.show).toHaveBeenCalled()
-    expect(mainButton.hide).not.toHaveBeenCalled()
-
-    rerender(<EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={false} />)
-    expect(mainButton.hide).toHaveBeenCalled()
-
-    const showCallsBeforeReturn = mainButton.show.mock.calls.length
-    rerender(<EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={true} />)
-    expect(mainButton.show.mock.calls.length).toBeGreaterThan(showCallsBeforeReturn)
-  })
-
-  it('disables the button while inactive even though the form is otherwise ready to save', async () => {
-    const mainButton = stubMainButton()
-
-    const { rerender } = render(
-      <EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={true} />,
-    )
-    await fillValidAmountAndDimension()
-    expect(mainButton.enable).toHaveBeenCalled()
-
-    // `disable` was already called once during the initial empty-amount render, before
-    // canSave became true — clear that history so the assertion below can only pass
-    // because of the inactive transition, not an earlier, unrelated call.
-    mainButton.disable.mockClear()
-
-    rerender(<EntryScreen bootstrap={bootstrapFixture} client={clientStub()} active={false} />)
-
-    expect(mainButton.disable).toHaveBeenCalled()
-  })
+  expect(capture.state.canSave).toBe(false)
+  expect(capture.state.save).toBe(firstSave)
 })

@@ -45,30 +45,49 @@ export function ReportsScreen({ user, client, period, dimensions = [] }: Reports
   const [view, setView] = useState<ReportView>('summary')
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col">
       <div
-        className="mx-4 rounded-xl border p-4 shadow-sm"
-        style={{ background: 'var(--surface-card)', borderColor: 'var(--border)' }}
+        style={{
+          background: 'var(--surface)',
+          padding: 'calc(54px + max(env(safe-area-inset-top), var(--tg-content-safe-top))) 22px 18px',
+          borderRadius: '0 0 28px 28px',
+        }}
       >
-        <PeriodPicker period={period} />
-      </div>
+        <h2
+          className="m-0"
+          style={{ font: '800 26px/1.1 "Plus Jakarta Sans"', color: 'var(--ink)', letterSpacing: '-.02em', marginBottom: 14 }}
+        >
+          {strings.tabs.reports}
+        </h2>
 
-      <div role="group" aria-label={strings.reports.view} className="flex gap-2 px-4">
-        {views.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            aria-pressed={view === item.id}
-            onClick={() => setView(item.id)}
-            className="rounded-full px-3 py-1 text-sm"
-            style={{
-              background: view === item.id ? 'var(--accent)' : 'var(--tg-secondary-bg)',
-              color: view === item.id ? 'var(--accent-text)' : 'var(--tg-text)',
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
+        <PeriodPicker period={period} />
+
+        <div
+          role="group"
+          aria-label={strings.reports.view}
+          className="flex"
+          style={{ background: 'var(--pill-bg)', borderRadius: 999, padding: 4, marginTop: 16 }}
+        >
+          {views.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={view === item.id}
+              onClick={() => setView(item.id)}
+              className="flex-1 rounded-full"
+              style={{
+                border: 0,
+                padding: '11px 8px',
+                font: '700 12px/1 "Plus Jakarta Sans"',
+                background: view === item.id ? 'var(--surface)' : 'transparent',
+                color: view === item.id ? 'var(--teal-900)' : '#8aa79f',
+                boxShadow: view === item.id ? '0 3px 10px rgba(16,72,63,.1)' : undefined,
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {view === 'summary' && <SummaryView client={client} period={period} dimensions={dimensions} />}

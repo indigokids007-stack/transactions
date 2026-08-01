@@ -86,10 +86,25 @@ export function TransactionSheet({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 flex flex-col justify-end"
-      style={{ background: 'rgba(0,0,0,0.4)' }}
+      className="fixed inset-0 z-10 flex flex-col justify-end"
+      style={{ background: 'rgba(11,45,38,.42)' }}
+      onClick={onClose}
     >
-      <div className="flex flex-col gap-3 rounded-t-2xl p-4" style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}>
+      <div
+        className="flex flex-col gap-3"
+        style={{
+          background: 'var(--surface)',
+          borderRadius: 'var(--r-sheet) var(--r-sheet) 0 0',
+          padding: '12px 22px 26px',
+          animation: 'sheetIn .26s cubic-bezier(.32,.72,.3,1)',
+        }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div
+          aria-hidden="true"
+          style={{ width: 44, height: 5, borderRadius: 999, background: 'var(--line-2)', margin: '0 auto' }}
+        />
+
         <TransactionHeader transaction={transaction} exponents={bootstrap.currencies} revisionState={revisionState} />
 
         {canManage ? (
@@ -99,17 +114,17 @@ export function TransactionSheet({
         )}
 
         {error ? (
-          <p role="alert" className="text-sm" style={{ color: 'var(--tg-hint)' }}>
+          <p role="alert" className="text-sm" style={{ color: 'var(--expense)' }}>
             {error}
           </p>
         ) : null}
 
-        <div className="mt-2 flex gap-2">
+        <div className="flex gap-2.5" style={{ marginTop: 8 }}>
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-full py-3 text-center text-sm"
-            style={{ background: 'var(--tg-secondary-bg)', color: 'var(--tg-text)' }}
+            className="flex-1 text-center"
+            style={{ border: 0, borderRadius: 22, padding: 17, font: '700 14px/1 "Plus Jakarta Sans"', background: 'var(--pill-bg)', color: 'var(--ink-2)' }}
           >
             {strings.common.cancel}
           </button>
@@ -118,8 +133,16 @@ export function TransactionSheet({
               type="button"
               disabled={saving}
               onClick={() => void save()}
-              className="flex-1 rounded-full py-3 text-center font-semibold disabled:opacity-50"
-              style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
+              className="flex-1 text-center disabled:opacity-50"
+              style={{
+                border: 0,
+                borderRadius: 22,
+                padding: 17,
+                font: '700 14px/1 "Plus Jakarta Sans"',
+                color: '#fff',
+                background: 'var(--grad-action)',
+                boxShadow: '0 10px 26px rgba(239,139,60,.3)',
+              }}
             >
               {strings.common.save}
             </button>
@@ -128,14 +151,16 @@ export function TransactionSheet({
 
         {canManage ? (
           confirmingDelete ? (
-            <div className="flex items-center gap-2">
-              <p className="flex-1 text-sm">{strings.history.deleteConfirm}</p>
+            <div className="flex items-center gap-2.5" style={{ background: '#fdf1ec', borderRadius: 18, padding: '12px 14px' }}>
+              <p className="flex-1" style={{ font: '600 12px/1.4 "Plus Jakarta Sans"', color: '#b4553a' }}>
+                {strings.history.deleteConfirm}
+              </p>
               <button
                 type="button"
                 disabled={deleting}
                 onClick={() => void confirmDelete()}
-                className="rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50"
-                style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
+                className="rounded-full disabled:opacity-50"
+                style={{ border: 0, padding: '10px 15px', font: '700 12px/1 "Plus Jakarta Sans"', background: '#e2603c', color: '#fff' }}
               >
                 {strings.common.confirm}
               </button>
@@ -144,8 +169,8 @@ export function TransactionSheet({
             <button
               type="button"
               onClick={() => setConfirmingDelete(true)}
-              className="w-full rounded-full py-2 text-sm"
-              style={{ color: 'var(--tg-hint)' }}
+              className="w-full"
+              style={{ border: 0, background: 'transparent', padding: 12, font: '600 13px/1 "Plus Jakarta Sans"', color: '#c0705a' }}
             >
               {strings.common.delete}
             </button>

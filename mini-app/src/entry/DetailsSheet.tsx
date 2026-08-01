@@ -1,78 +1,51 @@
-import { useState } from 'react'
 import type { ApiDimension } from '../api/types'
 import { strings } from '../strings'
 import { Sheet } from '../ui/Sheet'
 import type { EntryValues } from './useEntryForm'
 
 type DetailsSheetProps = {
+  open: boolean
+  onClose: () => void
   values: EntryValues
   dimensions: ApiDimension[]
   currencies: Record<string, number>
-  missingRequired: string[]
-  onTypeChange: (type: 'income' | 'expense') => void
   onCurrencyChange: (currency: string) => void
   onDateChange: (date: string) => void
   onNoteChange: (note: string) => void
   onDimensionChange: (dimensionId: number, valueId: number) => void
 }
 
-const TYPES = ['expense', 'income'] as const
+const fieldRowStyle = (warn: boolean): { background: string; borderRadius: number; padding: string } => ({
+  background: warn ? 'var(--field-warn)' : 'var(--field)',
+  borderRadius: 18,
+  padding: '14px 16px',
+})
 
-// Type, currency, date, note and the dimension picks: everything the keypad and the
-// category chips don't cover. Collapsed by default so the keypad keeps the room, but a
-// required dimension with no answer forces it open.
+const labelStyle = { font: '600 12px/1 "Plus Jakarta Sans"', color: 'var(--muted)' }
+const valueStyle = { border: 0, background: 'transparent', font: '700 14px/1 "Plus Jakarta Sans"', color: 'var(--teal-900)', outline: 'none', textAlign: 'right' as const }
+
+// Currency, date, note, and one row per active dimension — everything the keypad and the
+// category chips don't cover. Type moved to `EntryScreen`'s gradient header (income
+// entries no longer need this sheet at all). Controlled entirely by the caller: no local
+// open state, no force-open-on-missing-required — the coral dot and the disabled Saqlash
+// on `EntryScreen`'s trigger button communicate that guarantee instead (see its own
+// comment for why).
 export function DetailsSheet({
+  open,
+  onClose,
   values,
   dimensions,
   currencies,
-  missingRequired,
-  onTypeChange,
   onCurrencyChange,
   onDateChange,
   onNoteChange,
   onDimensionChange,
 }: DetailsSheetProps) {
-  const [opened, setOpened] = useState(false)
-
-  // Adjusting state during render, not an effect: once a required dimension has ever
-  // forced the sheet open, it stays open for the rest of the entry. Without this, the
-  // moment the user picks the value that satisfies `missingRequired`, this component
-  // re-renders with `missingRequired` empty and the sheet — including the very select
-  // they just used — collapses out from under their finger. The guard (`!opened`) is
-  // what keeps this from looping: once true, the condition can't fire again.
-  if (!opened && missingRequired.length > 0) {
-    setOpened(true)
-  }
-
-  const open = opened || missingRequired.length > 0
-
   return (
-    <Sheet label={strings.entry.details} open={open} onToggle={() => setOpened((current) => !current)}>
-      <div role="group" aria-label={strings.entry.type} className="flex gap-2">
-        {TYPES.map((type) => (
-          <button
-            key={type}
-            type="button"
-            aria-pressed={values.type === type}
-            onClick={() => onTypeChange(type)}
-            className="rounded-full px-3 py-1 text-sm"
-            style={{
-              background: values.type === type ? 'var(--accent)' : 'var(--tg-secondary-bg)',
-              color: values.type === type ? 'var(--accent-text)' : 'var(--tg-text)',
-            }}
-          >
-            {strings.entry[type]}
-          </button>
-        ))}
-      </div>
-
-      <label className="block text-sm">
-        {strings.entry.currency}
-        <select
-          value={values.currency}
-          onChange={(event) => onCurrencyChange(event.target.value)}
-          className="mt-1 block w-full rounded border px-2 py-1"
-        >
+    <Sheet label={strings.entry.details} open={open} onClose={onClose}>
+      <label className="flex items-center justify-between" style={fieldRowStyle(false)}>
+        <span style={labelStyle}>{strings.entry.currency}</span>
+        <select value={values.currency} onChange={(event) => onCurrencyChange(event.target.value)} style={valueStyle}>
           {Object.keys(currencies).map((code) => (
             <option key={code} value={code}>
               {code}
@@ -81,45 +54,62 @@ export function DetailsSheet({
         </select>
       </label>
 
-      <label className="block text-sm">
-        {strings.entry.date}
-        <input
-          type="date"
-          value={values.occurredOn}
-          onChange={(event) => onDateChange(event.target.value)}
-          className="mt-1 block w-full rounded border px-2 py-1"
-        />
+      <label className="flex items-center justify-between" style={fieldRowStyle(false)}>
+        <span style={labelStyle}>{strings.entry.date}</span>
+        <input type="date" value={values.occurredOn} onChange={(event) => onDateChange(event.target.value)} style={valueStyle} />
       </label>
 
-      <label className="block text-sm">
-        {strings.entry.note}
+      <label className="block" style={fieldRowStyle(false)}>
+        <span style={labelStyle}>{strings.entry.note}</span>
         <input
           type="text"
           value={values.note}
           onChange={(event) => onNoteChange(event.target.value)}
-          className="mt-1 block w-full rounded border px-2 py-1"
+          className="mt-2 block w-full"
+          style={{ border: 0, background: 'transparent', font: '600 14px/1 "Plus Jakarta Sans"', color: 'var(--ink)', outline: 'none' }}
         />
       </label>
 
-      {dimensions.map((dimension) => (
-        <label key={dimension.id} className="block text-sm">
-          {dimension.name}
-          <select
-            value={values.dimensionValues[dimension.id] ?? ''}
-            onChange={(event) => onDimensionChange(dimension.id, Number(event.target.value))}
-            className="mt-1 block w-full rounded border px-2 py-1"
-          >
-            <option value="" disabled>
-              {strings.entry.choose}
-            </option>
-            {dimension.values.map((value) => (
-              <option key={value.id} value={value.id}>
-                {value.name}
+      {dimensions.map((dimension) => {
+        const warn = values.dimensionValues[dimension.id] === undefined && dimension.is_required
+        return (
+          <label key={dimension.id} className="flex items-center justify-between" style={fieldRowStyle(warn)}>
+            <span style={labelStyle}>{dimension.name}</span>
+            <select
+              value={values.dimensionValues[dimension.id] ?? ''}
+              onChange={(event) => onDimensionChange(dimension.id, Number(event.target.value))}
+              style={valueStyle}
+            >
+              <option value="" disabled>
+                {strings.entry.choose}
               </option>
-            ))}
-          </select>
-        </label>
-      ))}
+              {dimension.values.map((value) => (
+                <option key={value.id} value={value.id}>
+                  {value.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )
+      })}
+
+      <button
+        type="button"
+        onClick={onClose}
+        className="w-full"
+        style={{
+          marginTop: 8,
+          border: 0,
+          borderRadius: 22,
+          padding: 17,
+          background: 'var(--grad-action)',
+          color: '#fff',
+          font: '700 15px/1 "Plus Jakarta Sans"',
+          boxShadow: 'var(--shadow-action)',
+        }}
+      >
+        {strings.entry.done}
+      </button>
     </Sheet>
   )
 }

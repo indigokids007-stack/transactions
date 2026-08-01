@@ -18,15 +18,23 @@ export function AmountKeypad({ value, onChange }: AmountKeypadProps) {
   }
 
   return (
-    <div className="grid grid-cols-3 gap-2 p-4">
+    <div className="grid grid-cols-3" style={{ gap: 10, padding: '16px 22px 6px' }}>
       {KEYS.map((key) => (
         <button
           key={key}
           type="button"
           aria-label={key === '⌫' ? strings.entry.backspace : key}
           onClick={() => press(key)}
-          className="rounded-xl py-4 text-xl font-medium"
-          style={{ background: 'var(--tg-secondary-bg)', color: 'var(--tg-text)' }}
+          className="active:scale-[.97]"
+          style={{
+            border: 0,
+            borderRadius: 22,
+            padding: '19px 0',
+            font: '600 24px/1 "Plus Jakarta Sans"',
+            color: 'var(--ink)',
+            background: 'var(--surface)',
+            boxShadow: 'var(--shadow-key)',
+          }}
         >
           {key}
         </button>

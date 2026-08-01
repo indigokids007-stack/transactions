@@ -22,29 +22,24 @@ it('applies a readable light palette outside Telegram', () => {
   expect(readVar('--tg-secondary-bg')).toBe('#f0f0f0')
 })
 
-it('applies the Telegram theme params when present, and calls ready/expand', () => {
+it('applies the Telegram theme params when present, and drives the app-shell lifecycle calls', () => {
   const ready = vi.fn()
   const expand = vi.fn()
+  const requestFullscreen = vi.fn()
+  const disableVerticalSwipes = vi.fn()
+  const enableClosingConfirmation = vi.fn()
   window.Telegram = {
     WebApp: {
       initData: '',
       colorScheme: 'dark',
       themeParams: { bg_color: '#000000', button_color: '#3390ec', secondary_bg_color: '#181818' },
-      MainButton: {
-        text: '',
-        isVisible: false,
-        isActive: true,
-        setText: () => {},
-        show: () => {},
-        hide: () => {},
-        enable: () => {},
-        disable: () => {},
-        onClick: () => {},
-        offClick: () => {},
-      },
+      contentSafeAreaInset: { top: 0, right: 0, bottom: 0, left: 0 },
       ready,
       expand,
       close: () => {},
+      requestFullscreen,
+      disableVerticalSwipes,
+      enableClosingConfirmation,
       onEvent: () => {},
       offEvent: () => {},
     },
@@ -59,6 +54,11 @@ it('applies the Telegram theme params when present, and calls ready/expand', () 
   expect(readVar('--tg-hint')).toBe('#707579')
   expect(ready).toHaveBeenCalledOnce()
   expect(expand).toHaveBeenCalledOnce()
+  // Opens full-screen, blocks the pull-down-to-close swipe, and asks Telegram to confirm
+  // before closing — the mini-app-shell behaviour this task adds alongside ready/expand.
+  expect(requestFullscreen).toHaveBeenCalledOnce()
+  expect(disableVerticalSwipes).toHaveBeenCalledOnce()
+  expect(enableClosingConfirmation).toHaveBeenCalledOnce()
 })
 
 it("sets data-theme from Telegram's colorScheme, independent of the OS setting", () => {
@@ -67,21 +67,13 @@ it("sets data-theme from Telegram's colorScheme, independent of the OS setting",
       initData: '',
       colorScheme: 'dark',
       themeParams: {},
-      MainButton: {
-        text: '',
-        isVisible: false,
-        isActive: true,
-        setText: () => {},
-        show: () => {},
-        hide: () => {},
-        enable: () => {},
-        disable: () => {},
-        onClick: () => {},
-        offClick: () => {},
-      },
+      contentSafeAreaInset: { top: 0, right: 0, bottom: 0, left: 0 },
       ready: () => {},
       expand: () => {},
       close: () => {},
+      requestFullscreen: () => {},
+      disableVerticalSwipes: () => {},
+      enableClosingConfirmation: () => {},
       onEvent: () => {},
       offEvent: () => {},
     },
@@ -98,21 +90,13 @@ it("sets data-theme to 'light' when Telegram's colorScheme is light", () => {
       initData: '',
       colorScheme: 'light',
       themeParams: {},
-      MainButton: {
-        text: '',
-        isVisible: false,
-        isActive: true,
-        setText: () => {},
-        show: () => {},
-        hide: () => {},
-        enable: () => {},
-        disable: () => {},
-        onClick: () => {},
-        offClick: () => {},
-      },
+      contentSafeAreaInset: { top: 0, right: 0, bottom: 0, left: 0 },
       ready: () => {},
       expand: () => {},
       close: () => {},
+      requestFullscreen: () => {},
+      disableVerticalSwipes: () => {},
+      enableClosingConfirmation: () => {},
       onEvent: () => {},
       offEvent: () => {},
     },
@@ -133,21 +117,13 @@ it('re-applies the theme when Telegram fires themeChanged, and unsubscribes on c
       initData: '',
       colorScheme: 'dark',
       themeParams,
-      MainButton: {
-        text: '',
-        isVisible: false,
-        isActive: true,
-        setText: () => {},
-        show: () => {},
-        hide: () => {},
-        enable: () => {},
-        disable: () => {},
-        onClick: () => {},
-        offClick: () => {},
-      },
+      contentSafeAreaInset: { top: 0, right: 0, bottom: 0, left: 0 },
       ready: () => {},
       expand: () => {},
       close: () => {},
+      requestFullscreen: () => {},
+      disableVerticalSwipes: () => {},
+      enableClosingConfirmation: () => {},
       onEvent: (eventType, callback) => {
         if (eventType === 'themeChanged') themeChangedCallback = callback
       },
@@ -167,4 +143,48 @@ it('re-applies the theme when Telegram fires themeChanged, and unsubscribes on c
 
   unmount()
   expect(offEvent).toHaveBeenCalledWith('themeChanged', themeChangedCallback)
+})
+
+// The header bar Telegram draws over the page in full-screen mode — a separate
+// obstruction from the device's own notch/status bar (`env(safe-area-inset-top)`), and
+// one that can change (e.g. entering/exiting full-screen), so this mirrors the
+// `themeChanged` test above: applied on mount, re-applied on the matching event, and
+// unsubscribed on cleanup.
+it('applies contentSafeAreaInset.top as a CSS var, re-applies on contentSafeAreaChanged, and unsubscribes on cleanup', () => {
+  let safeAreaChangedCallback: (() => void) | undefined
+  const offEvent = vi.fn()
+  const contentSafeAreaInset = { top: 44, right: 0, bottom: 0, left: 0 }
+
+  window.Telegram = {
+    WebApp: {
+      initData: '',
+      colorScheme: 'light',
+      themeParams: {},
+      contentSafeAreaInset,
+      ready: () => {},
+      expand: () => {},
+      close: () => {},
+      requestFullscreen: () => {},
+      disableVerticalSwipes: () => {},
+      enableClosingConfirmation: () => {},
+      onEvent: (eventType, callback) => {
+        if (eventType === 'contentSafeAreaChanged') safeAreaChangedCallback = callback
+      },
+      offEvent,
+    },
+  }
+
+  const { unmount } = renderHook(() => useTheme())
+
+  expect(readVar('--tg-content-safe-top')).toBe('44px')
+
+  // Telegram enters/exits full-screen, its own header bar changes height, then it
+  // notifies the app.
+  contentSafeAreaInset.top = 0
+  safeAreaChangedCallback?.()
+
+  expect(readVar('--tg-content-safe-top')).toBe('0px')
+
+  unmount()
+  expect(offEvent).toHaveBeenCalledWith('contentSafeAreaChanged', safeAreaChangedCallback)
 })

@@ -33,7 +33,12 @@ export function CategoryChips({ categories, type, selectedId, defaultId, onSelec
   const chips = stickyFirst(flatten(categories, type), defaultId)
 
   return (
-    <div role="group" aria-label={strings.entry.category} className="flex gap-2 overflow-x-auto px-4 py-2">
+    <div
+      role="group"
+      aria-label={strings.entry.category}
+      className="chips flex gap-2 overflow-x-auto"
+      style={{ padding: '18px 22px 4px' }}
+    >
       {chips.map((category) => {
         const selected = category.id === selectedId
         return (
@@ -42,10 +47,14 @@ export function CategoryChips({ categories, type, selectedId, defaultId, onSelec
             type="button"
             aria-pressed={selected}
             onClick={() => onSelect(category.id)}
-            className="whitespace-nowrap rounded-full px-4 py-2 text-sm"
+            className="whitespace-nowrap rounded-full"
             style={{
-              background: selected ? 'var(--accent)' : 'var(--tg-secondary-bg)',
-              color: selected ? 'var(--accent-text)' : 'var(--tg-text)',
+              border: 0,
+              padding: '11px 16px',
+              font: '600 13px/1 "Plus Jakarta Sans"',
+              background: selected ? 'var(--grad-action)' : 'var(--surface)',
+              color: selected ? '#fff' : 'var(--ink-2)',
+              boxShadow: selected ? '0 6px 16px rgba(239,139,60,.3)' : 'var(--shadow-chip)',
             }}
           >
             {category.name}

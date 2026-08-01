@@ -67,7 +67,7 @@ export function StaffView({ client, period }: StaffViewProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-3.5" style={{ padding: '16px 22px 130px' }}>
       {rankings.map((ranking) => (
         <StaffSection key={ranking.currency} currency={ranking.currency} rows={ranking.rows} />
       ))}
