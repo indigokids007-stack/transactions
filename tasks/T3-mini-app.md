@@ -46,3 +46,11 @@ Cara staff open the mini app from Telegram to record an expense with dimensions 
 
 ### Notes from previous role
 Builder: nine tasks, 208 tests. Three plan defects were found by implementers and fixed: a test assertion that could never match because testing-library normalises non-breaking spaces; types that assumed Laravel wraps bootstrap resources in `data` when it does not; and no task wiring `ReportsScreen` into `App.tsx`, which left the trend and staff views unreachable.
+
+### Round 3 outcome
+
+Verdict: NEEDS HUMAN DECISION, one MAJOR. `Money::toDecimal` threw for `PHP_INT_MIN` in a decimal currency because `abs()` overflowed to a float. Human ruled 2026-08-01: fix now, no fourth review round. Fixed in `9c031c8` with `intdiv`/`%` on the negative value directly, no `abs()`, no float. Six tests added covering `PHP_INT_MIN`, `PHP_INT_MAX`, both currency kinds and the sign boundary, mutation-verified against the exact reported `TypeError`.
+
+The fix carries no review round of its own. The human accepted that when ruling.
+
+Backend 499 tests, mini app 254 tests, analyze and pint clean.
