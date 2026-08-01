@@ -57,6 +57,17 @@ class Money
             return (string) $minor;
         }
 
-        return number_format($minor / (10 ** $exponent), $exponent, '.', '');
+        // Integer arithmetic throughout: `$minor` can exceed 2^53 once a report sums many
+        // transactions, and a float division (the previous implementation) silently rounds
+        // past that point. `intdiv()`/`%` on two ints never leave the integer domain, so the
+        // string built from them is exact regardless of magnitude.
+        $sign = $minor < 0 ? '-' : '';
+        $absolute = abs($minor);
+        $divisor = 10 ** $exponent;
+
+        $whole = intdiv($absolute, $divisor);
+        $fraction = (string) ($absolute % $divisor);
+
+        return $sign.$whole.'.'.str_pad($fraction, $exponent, '0', STR_PAD_LEFT);
     }
 }
