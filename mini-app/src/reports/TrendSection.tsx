@@ -60,8 +60,8 @@ export function TrendSection({ currency, series, chartWidth, chartHeight }: Tren
   return (
     <section
       data-testid={`trend-${currency}`}
-      className="rounded-lg border p-3"
-      style={{ borderColor: 'var(--tg-hint)' }}
+      className="rounded-xl border p-4 shadow-sm"
+      style={{ borderColor: 'var(--border)', background: 'var(--surface-card)' }}
     >
       <h3 className="text-sm font-semibold">{currency}</h3>
 
@@ -72,10 +72,10 @@ export function TrendSection({ currency, series, chartWidth, chartHeight }: Tren
             <XAxis dataKey="period" />
             <YAxis tickFormatter={currency === CHART_SCALED_CURRENCY ? scaledAxisTick : undefined} />
             <Legend />
-            <Bar dataKey="income" name={strings.entry.income} fill="var(--tg-button)" isAnimationActive={false}>
+            <Bar dataKey="income" name={strings.entry.income} fill="var(--accent)" isAnimationActive={false}>
               <LabelList position="top" valueAccessor={labelValue('incomeAmount', currency)} />
             </Bar>
-            <Bar dataKey="expense" name={strings.entry.expense} fill="var(--tg-hint)" isAnimationActive={false}>
+            <Bar dataKey="expense" name={strings.entry.expense} fill="var(--accent-2)" isAnimationActive={false}>
               <LabelList position="top" valueAccessor={labelValue('expenseAmount', currency)} />
             </Bar>
           </BarChart>
