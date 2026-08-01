@@ -1,7 +1,7 @@
 import { Bar, BarChart, CartesianGrid, Legend, LabelList, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 import type { CartesianLabelListEntry, PolarLabelListEntry } from 'recharts/types/component/LabelList'
 import { strings } from '../strings'
-import { formatMoneyString } from '../ui/Money'
+import { CHART_SCALED_CURRENCY, formatMoneyString, toChartThousands } from '../ui/Money'
 
 export type TrendPoint = {
   period: string
@@ -32,14 +32,24 @@ function isTrendPoint(value: unknown): value is TrendPoint {
 // A `LabelList` `valueAccessor` (rather than `formatter`, which only ever sees the raw
 // `income`/`expense` number) reaches the whole data point through `entry.payload`, so it
 // can read the exact string field instead. Recharts types `payload` as the same union for
-// every chart kind, hence the runtime guard rather than a cast.
-function labelValue(key: 'incomeAmount' | 'expenseAmount') {
+// every chart kind, hence the runtime guard rather than a cast. `currency` decides which
+// formatter reads that string — `toChartThousands` still reads the exact `amount`, never
+// the lossy `amount_minor` number, so the precision guarantee holds at any scale.
+function labelValue(key: 'incomeAmount' | 'expenseAmount', currency: string) {
   return (entry: CartesianLabelListEntry | PolarLabelListEntry): string => {
     const payload: unknown = entry.payload
     if (!isTrendPoint(payload)) return ''
     const amount = payload[key]
-    return amount === undefined ? '' : formatMoneyString(amount)
+    if (amount === undefined) return ''
+    return currency === CHART_SCALED_CURRENCY ? toChartThousands(amount) : formatMoneyString(amount)
   }
+}
+
+// Recharts calls this with the axis's own generated tick values — already the "nice"
+// round numbers it chose for the gridlines, not a real transaction's amount — so plain
+// number arithmetic is fine here; there is no precision guarantee to protect at a gridline.
+function scaledAxisTick(value: number): string {
+  return String(Math.round(value / 1000))
 }
 
 // One currency's slice of a trend report: its own bar chart, never another currency's
@@ -60,13 +70,13 @@ export function TrendSection({ currency, series, chartWidth, chartHeight }: Tren
           <BarChart data={series}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="period" />
-            <YAxis />
+            <YAxis tickFormatter={currency === CHART_SCALED_CURRENCY ? scaledAxisTick : undefined} />
             <Legend />
             <Bar dataKey="income" name={strings.entry.income} fill="var(--tg-button)" isAnimationActive={false}>
-              <LabelList position="top" valueAccessor={labelValue('incomeAmount')} />
+              <LabelList position="top" valueAccessor={labelValue('incomeAmount', currency)} />
             </Bar>
             <Bar dataKey="expense" name={strings.entry.expense} fill="var(--tg-hint)" isAnimationActive={false}>
-              <LabelList position="top" valueAccessor={labelValue('expenseAmount')} />
+              <LabelList position="top" valueAccessor={labelValue('expenseAmount', currency)} />
             </Bar>
           </BarChart>
         </ResponsiveContainer>

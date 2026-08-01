@@ -1,5 +1,5 @@
 import { render, screen, getDefaultNormalizer } from "@testing-library/react"
-import { Money, MoneyAmount, formatMoney, formatMoneyString } from "./Money"
+import { Money, MoneyAmount, formatMoney, formatMoneyString, toChartThousands } from "./Money"
 
 const exponents = { UZS: 0, USD: 2 }
 
@@ -98,5 +98,34 @@ describe("MoneyAmount", () => {
     ).toBeInTheDocument()
     expect(screen.queryByText(/100 000 000 000 000\.00/)).not.toBeInTheDocument()
     expect(screen.getByText(/USD/)).toBeInTheDocument()
+  })
+})
+
+describe("toChartThousands", () => {
+  it("divides an exact multiple of 1000", () => {
+    expect(toChartThousands("1000")).toBe("1")
+    expect(toChartThousands("1000000")).toBe("1000")
+  })
+
+  it("rounds half up rather than truncating", () => {
+    expect(toChartThousands("1234500")).toBe("1235") // remainder 500 -> rounds up
+    expect(toChartThousands("1234499")).toBe("1234") // remainder 499 -> rounds down
+  })
+
+  it("keeps the sign, and drops it if the rounded result is exactly zero", () => {
+    expect(toChartThousands("-2000")).toBe("-2")
+    expect(toChartThousands("-400")).toBe("0")
+  })
+
+  it("never routes through a JS number: exact at magnitudes where Number would already be lossy", () => {
+    // 17 digits, past Number.MAX_SAFE_INTEGER (2^53 ~= 9.007e15) — BigInt division stays
+    // exact where `Number(amount) / 1000` would already have silently rounded the input.
+    expect(toChartThousands("12345678901234567")).toBe("12345678901235")
+  })
+
+  it("is defensive against a stray decimal point, dropping it rather than throwing", () => {
+    // UZS never carries one; this only matters if a caller applies it to the wrong
+    // currency's amount, which must degrade rather than crash the chart.
+    expect(toChartThousands("42.00")).toBe("0")
   })
 })

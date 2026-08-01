@@ -48,6 +48,28 @@ export function formatMoneyString(amount: string): string {
   return `${isNegative ? "-" : ""}${grouped}${fraction === undefined ? "" : `.${fraction}`}`
 }
 
+// UZS has no minor unit and ordinary entries run into the hundreds of thousands or
+// millions, so a raw chart axis or bar label in so'm is hard to read at a glance. Human
+// ruling 2026-08-01: scale UZS chart values to thousands (1 000 000 -> 1000), and only
+// UZS — a currency with real decimals is already a small, legible number.
+export const CHART_SCALED_CURRENCY = 'UZS'
+
+// Divides an exact decimal-string amount by 1000 and rounds to the nearest whole number,
+// entirely in integer arithmetic (`BigInt`), so a chart value never routes through the
+// same lossy `amount_minor` JSON number `MoneyAmount` above refuses to read from. A
+// fractional part is dropped rather than rounded into the result — UZS, the only currency
+// this runs on, never carries one; a stray decimal point from a caller that got the
+// currency check wrong would otherwise make `BigInt` throw.
+export function toChartThousands(amount: string): string {
+  const isNegative = amount.startsWith("-")
+  const unsigned = isNegative ? amount.slice(1) : amount
+  const whole = BigInt(unsigned.split(".")[0])
+  const quotient = whole / 1000n
+  const remainder = whole % 1000n
+  const rounded = remainder * 2n >= 1000n ? quotient + 1n : quotient
+  return `${isNegative && rounded !== 0n ? "-" : ""}${rounded.toString()}`
+}
+
 type MoneyAmountProps = {
   amount: string
   currency: string

@@ -61,11 +61,14 @@ it('does not let a stale period response overwrite a newer one', async () => {
 
   await waitFor(() => expect(resolvers).toHaveLength(2))
 
+  // 111000/222000 rather than 111/222: UZS's bar label is scaled to thousands, and these
+  // values are chosen so the scaled label ("111"/"222") is the same text this test always
+  // asserted on — the race being tested is unrelated to the scaling feature.
   const staleReport: TrendReport = {
-    points: [{ period: '2026-07-01', currency: 'UZS', type: 'expense', amount_minor: 111, amount: '111', count: 1 }],
+    points: [{ period: '2026-07-01', currency: 'UZS', type: 'expense', amount_minor: 111000, amount: '111000', count: 1 }],
   }
   const freshReport: TrendReport = {
-    points: [{ period: '2026-08-01', currency: 'UZS', type: 'expense', amount_minor: 222, amount: '222', count: 1 }],
+    points: [{ period: '2026-08-01', currency: 'UZS', type: 'expense', amount_minor: 222000, amount: '222000', count: 1 }],
   }
 
   // The second (fresher) request settles first ...
@@ -111,38 +114,53 @@ it('never lets one currency\'s figures land inside another currency\'s chart', a
   const uzs = await screen.findByTestId('trend-UZS')
   const usd = await screen.findByTestId('trend-USD')
 
-  expect(await within(uzs).findByText('150 000')).toBeInTheDocument()
-  expect(await within(uzs).findByText('90 000')).toBeInTheDocument()
+  // UZS is the one currency scaled to thousands (150000 -> "150", 90000 -> "90"); USD
+  // keeps its own two-decimal figure unscaled.
+  expect(await within(uzs).findByText('150')).toBeInTheDocument()
+  expect(await within(uzs).findByText('90')).toBeInTheDocument()
   expect(await within(usd).findByText('42.00')).toBeInTheDocument()
 
-  // Neither chart may show a figure that only makes sense as the other currency's row —
-  // each checked in the format its own `amount` string already carries, since a leaked
-  // row renders differently depending on which currency's bucket it lands in. UZS catches
-  // USD's 4200 minor units rendered as if they were UZS's own zero-exponent figure
-  // ("4 200"); USD catches UZS's period-two row (90000, which USD has no real entry for at
-  // all) rendered as if it were USD's own two-decimal figure ("900.00") — a phantom bar
-  // that would only exist if USD's bucket had silently inherited UZS's period.
-  expect(within(uzs).queryByText('4 200')).not.toBeInTheDocument()
+  // The raw, unscaled UZS figures must not appear either — proving the scaling actually
+  // ran rather than being silently skipped.
+  expect(within(uzs).queryByText('150 000')).not.toBeInTheDocument()
+  expect(within(uzs).queryByText('90 000')).not.toBeInTheDocument()
+
+  // Neither chart may show a figure that only makes sense as the other currency's row.
+  // UZS catches USD's own unscaled two-decimal label ("42.00") — UZS never shows a decimal
+  // point, so its presence would mean USD's row landed in the wrong bucket. USD catches
+  // both of UZS's forms: the scaled ("150"/"90") and the raw ("150 000"/"90 000") — a
+  // phantom bar that would only exist if USD's bucket had silently inherited UZS's period.
+  expect(within(uzs).queryByText('42.00')).not.toBeInTheDocument()
+  expect(within(usd).queryByText('150')).not.toBeInTheDocument()
+  expect(within(usd).queryByText('90')).not.toBeInTheDocument()
+  expect(within(usd).queryByText('150 000')).not.toBeInTheDocument()
   expect(within(usd).queryByText('900.00')).not.toBeInTheDocument()
 })
 
-// The review's exact scenario, mirroring `SummaryView`'s equivalent test: `amount_minor`
-// here is deliberately the value `JSON.parse` would round a too-large sum down to, standing
-// in for what a real response already looks like on arrival; `amount` carries the true
-// figure. If `TrendSection`'s bar label ever went back to reading the raw `income` number
-// instead of `incomeAmount`, this label would show the wrong, rounded figure.
-it('labels a bar above Number.MAX_SAFE_INTEGER exactly, from the string amount', async () => {
+// The review's exact scenario, mirroring `SummaryView`'s equivalent test, now under UZS's
+// thousands scaling: `amount_minor` is deliberately the value `JSON.parse` would round a
+// too-large sum down to, standing in for what a real response already looks like on
+// arrival; `amount` carries the true figure. A plain division by 1000 would wash out a
+// one-unit gap between the two, so the exact amount here (901 past the rounded
+// `amount_minor`) is chosen to still land on a different scaled figure either way: the
+// lossy number divides evenly to "10000000000000", the exact string rounds up to
+// "10000000000001". If `TrendSection`'s bar label ever went back to reading the raw
+// `income` number instead of `incomeAmount`, this label would show the lossy figure
+// instead. (Not asserting the lossy figure's absence: at this magnitude the Y axis's own
+// auto-generated gridlines legitimately land on nearby round numbers once scaled, so a
+// bare "10000000000000" can correctly appear as an axis tick in the same chart — the
+// bar's own label is what this test is about, and its presence is the whole proof.)
+it('labels a bar above Number.MAX_SAFE_INTEGER exactly, from the string amount, even scaled', async () => {
   const bigTrend: TrendReport = {
     points: [
-      { period: '2026-07-01', currency: 'UZS', type: 'expense', amount_minor: 10000000000000000, amount: '10000000000000001', count: 11 },
+      { period: '2026-07-01', currency: 'UZS', type: 'expense', amount_minor: 10000000000000000, amount: '10000000000000901', count: 11 },
     ],
   }
 
   render(<TrendView client={clientReturning(bigTrend)} period={period} chartWidth={320} chartHeight={240} />)
 
   const uzs = await screen.findByTestId('trend-UZS')
-  expect(await within(uzs).findByText('10 000 000 000 000 001')).toBeInTheDocument()
-  expect(within(uzs).queryByText(/10 000 000 000 000 000\b/)).not.toBeInTheDocument()
+  expect(await within(uzs).findByText('10000000000001')).toBeInTheDocument()
 })
 
 // The review's finding: a failed request used to render a dead end with no action.
@@ -172,4 +190,39 @@ it('shows a specific message for a 429, not the generic failure', async () => {
 
   expect(await screen.findByText(strings.reports.rateLimited)).toBeInTheDocument()
   expect(screen.queryByText(strings.reports.loadFailed)).not.toBeInTheDocument()
+})
+
+// The Y axis's own gridline labels, not the bar labels above — recharts generates its own
+// "nice" tick values from the data range, so this reads whatever it chose for a chart
+// whose UZS data tops out at 1 000 000, and confirms the axis reads in thousands too, not
+// only the bars. Reads the tick `<tspan>`s directly rather than through
+// `getByText`/`findByText`: Testing Library's default text query does not reliably match
+// text nested in an SVG `<text><tspan>` pair the way it matches a plain element, which
+// this test hit as a false failure before switching to a direct DOM read.
+it('scales the y axis to thousands for uzs, leaving usd alone', async () => {
+  const scaledAxisTrend: TrendReport = {
+    points: [
+      { period: '2026-07-01', currency: 'UZS', type: 'expense', amount_minor: 1000000, amount: '1000000', count: 1 },
+      { period: '2026-07-02', currency: 'USD', type: 'expense', amount_minor: 100000, amount: '1000.00', count: 1 },
+    ],
+  }
+
+  render(
+    <TrendView client={clientReturning(scaledAxisTrend)} period={period} chartWidth={320} chartHeight={240} />,
+  )
+
+  const uzs = await screen.findByTestId('trend-UZS')
+  const usd = await screen.findByTestId('trend-USD')
+
+  function yAxisTicks(section: HTMLElement): string[] {
+    return [...section.querySelectorAll('.recharts-yAxis-tick-labels tspan')].map((el) => el.textContent ?? '')
+  }
+
+  // Recharts picks a "nice" round number of ticks between 0 and the series' own max; for a
+  // single UZS point at 1 000 000 that is 0/250 000/500 000/750 000/1 000 000 — scaled,
+  // 0/250/500/750/1000. USD, left unscaled, keeps its own default tick reading the raw
+  // number of minor units — its top tick is "100000" for the same underlying magnitude,
+  // proving the scaling is UZS-only, not applied to every axis.
+  expect(yAxisTicks(uzs)).toEqual(['0', '250', '500', '750', '1000'])
+  expect(yAxisTicks(usd)).toContain('100000')
 })
