@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import type { ApiTransaction } from '../api/types'
 import { strings } from '../strings'
 import { Money } from '../ui/Money'
@@ -47,10 +48,17 @@ export function TransactionList({ items, exponents, hasMore, onLoadMore, onSelec
             onClick={() => onSelect(item.id)}
             className="flex w-full items-center justify-between px-4 py-3 text-left"
           >
-            <span>
-              <span className="block text-sm">{item.category.name}</span>
-              <span className="block text-xs opacity-70">
-                {strings.entry[item.type]} · {item.occurred_on}
+            <span className="flex items-center gap-3">
+              {item.type === 'income' ? (
+                <ArrowUpRight size={18} style={{ color: 'var(--accent)' }} aria-hidden="true" />
+              ) : (
+                <ArrowDownLeft size={18} style={{ color: 'var(--accent-2)' }} aria-hidden="true" />
+              )}
+              <span>
+                <span className="block text-sm">{item.category.name}</span>
+                <span className="block text-xs opacity-70">
+                  {strings.entry[item.type]} · {item.occurred_on}
+                </span>
               </span>
             </span>
             <Money minor={item.amount_minor} currency={item.currency} exponents={exponents} />
