@@ -67,3 +67,26 @@ make app-lint   # type-check with tsc
 ## Ownership
 
 Owned by the Cara team.
+
+## Serving the mini app from Laravel
+
+The mini app is built into `public/app`, so Laravel serves it on the same origin as the
+API. One domain, no CORS, one deploy.
+
+```bash
+make app-deploy      # builds mini-app into public/app with an empty API base URL
+```
+
+The API is then reached at `/api/...` relative to the same host, which is why
+`VITE_API_BASE_URL` is empty in that target. `public/app` is a build artefact and is
+gitignored; run `make app-deploy` as part of deployment.
+
+Point Telegram at it by setting the URL in BotFather (`/newapp` or `/setmenubutton`) and
+in `.env`:
+
+```
+TELEGRAM_MINI_APP_URL=https://your-domain/app/
+```
+
+Run `php artisan config:clear` after changing it. The bot only shows its "open in app"
+button when that URL is https.

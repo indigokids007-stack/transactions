@@ -25,3 +25,4 @@ Thumbs.db
 .superpowers/
 mini-app/node_modules
 mini-app/dist
+/public/app
