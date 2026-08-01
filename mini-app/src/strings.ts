@@ -83,6 +83,9 @@ export const strings = {
     bySummary: 'Umumiy',
     byTrend: 'Dinamika',
     byStaff: 'Xodimlar',
+    // The pie chart's 9th+ category, folded into one slice so the chart never exceeds
+    // the validated 8-slot color order (dataviz skill).
+    other: 'Boshqa',
   },
   history: {
     // Filter labels: `category`/`currency` reuse the same words as the entry form's
