@@ -69,3 +69,7 @@
   chunk warning; git diff --check passed; working tree clean.
 
   VERDICT: CHANGES REQUESTED
+
+## Seat downgrade, round 2
+
+The `gpt-5.6-sol` weekly quota ran out after round 1. The full-lane primary seat for a Claude-built diff is `gpt-5.6-sol` at effort `high`; round 2 ran on `gpt-5.6-terra` at effort `medium`, the light-lane seat. Human ruled 2026-08-01: continue on terra rather than spend a usage reset or stop. Recall is lower than the seat table intends; weigh that when reading round 2's verdict.
