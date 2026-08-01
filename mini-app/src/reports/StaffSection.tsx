@@ -16,8 +16,8 @@ export function StaffSection({ currency, rows }: StaffSectionProps) {
   return (
     <section
       data-testid={`staff-${currency}`}
-      className="rounded-lg border p-3"
-      style={{ borderColor: 'var(--tg-hint)' }}
+      className="rounded-xl border p-4 shadow-sm"
+      style={{ borderColor: 'var(--border)', background: 'var(--surface-card)' }}
     >
       <h3 className="text-sm font-semibold">{currency}</h3>
 

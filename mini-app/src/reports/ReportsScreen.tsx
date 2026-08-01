@@ -57,7 +57,7 @@ export function ReportsScreen({ user, client, period, dimensions = [] }: Reports
             onClick={() => setView(item.id)}
             className="rounded-full px-3 py-1 text-sm"
             style={{
-              background: view === item.id ? 'var(--tg-button)' : 'var(--tg-secondary-bg)',
+              background: view === item.id ? 'var(--accent)' : 'var(--tg-secondary-bg)',
               color: view === item.id ? 'var(--tg-button-text)' : 'var(--tg-text)',
             }}
           >

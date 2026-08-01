@@ -10,7 +10,7 @@ const PRESETS = ['this-month', 'last-month'] as const
 
 function chipStyle(selected: boolean): { background: string; color: string } {
   return {
-    background: selected ? 'var(--tg-button)' : 'var(--tg-secondary-bg)',
+    background: selected ? 'var(--accent)' : 'var(--tg-secondary-bg)',
     color: selected ? 'var(--tg-button-text)' : 'var(--tg-text)',
   }
 }
