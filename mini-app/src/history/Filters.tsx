@@ -37,7 +37,7 @@ export function Filters({
 }: FiltersProps) {
   return (
     <div
-      className="flex flex-col gap-3 rounded-xl border p-4 shadow-sm"
+      className="mx-4 flex flex-col gap-3 rounded-xl border p-4 shadow-sm"
       style={{ background: 'var(--surface-card)', borderColor: 'var(--border)' }}
     >
       <PeriodPicker period={period} />

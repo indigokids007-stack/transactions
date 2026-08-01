@@ -8,6 +8,7 @@ function readVar(name: string): string {
 afterEach(() => {
   delete window.Telegram
   document.documentElement.removeAttribute('style')
+  document.documentElement.removeAttribute('data-theme')
 })
 
 it('applies a readable light palette outside Telegram', () => {
@@ -58,6 +59,68 @@ it('applies the Telegram theme params when present, and calls ready/expand', () 
   expect(readVar('--tg-hint')).toBe('#707579')
   expect(ready).toHaveBeenCalledOnce()
   expect(expand).toHaveBeenCalledOnce()
+})
+
+it("sets data-theme from Telegram's colorScheme, independent of the OS setting", () => {
+  window.Telegram = {
+    WebApp: {
+      initData: '',
+      colorScheme: 'dark',
+      themeParams: {},
+      MainButton: {
+        text: '',
+        isVisible: false,
+        isActive: true,
+        setText: () => {},
+        show: () => {},
+        hide: () => {},
+        enable: () => {},
+        disable: () => {},
+        onClick: () => {},
+        offClick: () => {},
+      },
+      ready: () => {},
+      expand: () => {},
+      close: () => {},
+      onEvent: () => {},
+      offEvent: () => {},
+    },
+  }
+
+  renderHook(() => useTheme())
+
+  expect(document.documentElement.dataset.theme).toBe('dark')
+})
+
+it("sets data-theme to 'light' when Telegram's colorScheme is light", () => {
+  window.Telegram = {
+    WebApp: {
+      initData: '',
+      colorScheme: 'light',
+      themeParams: {},
+      MainButton: {
+        text: '',
+        isVisible: false,
+        isActive: true,
+        setText: () => {},
+        show: () => {},
+        hide: () => {},
+        enable: () => {},
+        disable: () => {},
+        onClick: () => {},
+        offClick: () => {},
+      },
+      ready: () => {},
+      expand: () => {},
+      close: () => {},
+      onEvent: () => {},
+      offEvent: () => {},
+    },
+  }
+
+  renderHook(() => useTheme())
+
+  expect(document.documentElement.dataset.theme).toBe('light')
 })
 
 it('re-applies the theme when Telegram fires themeChanged, and unsubscribes on cleanup', () => {

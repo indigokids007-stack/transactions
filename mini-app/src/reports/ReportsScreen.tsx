@@ -46,7 +46,12 @@ export function ReportsScreen({ user, client, period, dimensions = [] }: Reports
 
   return (
     <div className="flex flex-col gap-3">
-      <PeriodPicker period={period} />
+      <div
+        className="mx-4 rounded-xl border p-4 shadow-sm"
+        style={{ background: 'var(--surface-card)', borderColor: 'var(--border)' }}
+      >
+        <PeriodPicker period={period} />
+      </div>
 
       <div role="group" aria-label={strings.reports.view} className="flex gap-2 px-4">
         {views.map((item) => (
