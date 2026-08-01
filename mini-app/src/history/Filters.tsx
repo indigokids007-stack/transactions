@@ -36,7 +36,7 @@ export function Filters({
   onDimensionChange,
 }: FiltersProps) {
   return (
-    <div className="flex flex-col gap-2 p-4">
+    <div className="flex flex-col gap-3 p-4">
       <PeriodPicker period={period} />
 
       <label className="block text-sm">

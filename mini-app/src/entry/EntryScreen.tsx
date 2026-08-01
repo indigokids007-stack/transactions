@@ -143,7 +143,7 @@ export function EntryScreen({ bootstrap, client, active = true }: EntryScreenPro
           disabled={!form.canSave}
           onClick={() => void form.save()}
           className="mx-4 mt-2 rounded-full py-3 text-center font-semibold disabled:opacity-50"
-          style={{ background: 'var(--tg-button)', color: 'var(--tg-button-text)' }}
+          style={{ background: 'var(--accent)', color: 'var(--tg-button-text)' }}
         >
           {strings.entry.save}
         </button>

@@ -20,7 +20,7 @@ export function ErrorState({ message, actionLabel, onAction }: ErrorStateProps) 
           type="button"
           onClick={onAction}
           className="rounded-full px-4 py-2"
-          style={{ background: 'var(--tg-button)', color: 'var(--tg-button-text)' }}
+          style={{ background: 'var(--accent)', color: 'var(--tg-button-text)' }}
         >
           {actionLabel}
         </button>
