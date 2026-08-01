@@ -150,7 +150,12 @@ export function EntryScreen({ bootstrap, client, active = true }: EntryScreenPro
       ) : null}
 
       {form.lastSaved ? (
-        <Toast message={strings.entry.saved} action={strings.entry.undo} onAction={() => void form.undo()} />
+        <Toast
+          message={strings.entry.saved}
+          action={strings.entry.undo}
+          onAction={() => void form.undo()}
+          onDismiss={form.dismissSaved}
+        />
       ) : null}
     </div>
   )

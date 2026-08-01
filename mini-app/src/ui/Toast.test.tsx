@@ -18,3 +18,38 @@ it('shows the action and calls onAction when clicked', async () => {
 
   expect(onAction).toHaveBeenCalledOnce()
 })
+
+it('never calls onDismiss on its own when none is given', () => {
+  vi.useFakeTimers()
+  render(<Toast message="Saqlandi." />)
+
+  vi.advanceTimersByTime(10_000)
+
+  vi.useRealTimers()
+})
+
+it('calls onDismiss once the duration elapses', () => {
+  vi.useFakeTimers()
+  const onDismiss = vi.fn()
+  render(<Toast message="Saqlandi." onDismiss={onDismiss} duration={4000} />)
+
+  vi.advanceTimersByTime(3999)
+  expect(onDismiss).not.toHaveBeenCalled()
+
+  vi.advanceTimersByTime(1)
+  expect(onDismiss).toHaveBeenCalledOnce()
+
+  vi.useRealTimers()
+})
+
+it('clears its timer on unmount so a stale onDismiss never fires', () => {
+  vi.useFakeTimers()
+  const onDismiss = vi.fn()
+  const { unmount } = render(<Toast message="Saqlandi." onDismiss={onDismiss} duration={4000} />)
+
+  unmount()
+  vi.advanceTimersByTime(4000)
+
+  expect(onDismiss).not.toHaveBeenCalled()
+  vi.useRealTimers()
+})

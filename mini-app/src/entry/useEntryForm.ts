@@ -33,6 +33,7 @@ export type EntryForm = {
   save: () => Promise<void>
   lastSaved: ApiTransaction | null
   undo: () => Promise<void>
+  dismissSaved: () => void
   fieldErrors: Record<string, string[]>
   notice: string | null
 }
@@ -139,6 +140,10 @@ export function useEntryForm(bootstrap: Bootstrap, client: ApiClient): EntryForm
     setLastSaved(null)
   }
 
+  function dismissSaved(): void {
+    setLastSaved(null)
+  }
+
   return {
     values,
     categories: reference.categories,
@@ -157,6 +162,7 @@ export function useEntryForm(bootstrap: Bootstrap, client: ApiClient): EntryForm
     save,
     lastSaved,
     undo,
+    dismissSaved,
     fieldErrors,
     notice,
   }

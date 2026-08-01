@@ -173,3 +173,20 @@ it('keeps an unrelated field error alongside a stale-reference notice', async ()
   // stale-reference related and still needs to reach the user.
   expect(result.current.fieldErrors).toEqual({ note: ['Note is too long.'] })
 })
+
+it('clears lastSaved on dismissSaved without touching the server', async () => {
+  const client = clientStub()
+  const { result } = renderHook(() => useEntryForm(bootstrapFixture, client))
+
+  act(() => result.current.setAmount('120000'))
+  act(() => result.current.setDimension(3, 9))
+  await act(async () => {
+    await result.current.save()
+  })
+  expect(result.current.lastSaved).not.toBeNull()
+
+  act(() => result.current.dismissSaved())
+
+  expect(result.current.lastSaved).toBeNull()
+  expect(client.deleteTransaction).not.toHaveBeenCalled()
+})

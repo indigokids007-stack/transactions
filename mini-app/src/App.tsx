@@ -66,8 +66,12 @@ export function App({ session, onRetry, client }: AppProps) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col" style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}>
-      <main className="flex-1">
+    // Fixed to the viewport, not merely `min-h-screen`: a tall panel (the entry form's
+    // details sheet, a long history list) must scroll inside `main` rather than push the
+    // tab bar down the page. That keeps the tab bar visible at all times, which is the
+    // point of a bottom nav.
+    <div className="fixed inset-0 flex flex-col" style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}>
+      <main className="flex-1 overflow-y-auto">
         {TAB_ITEMS.map((item) => (
           <div
             key={item.id}
