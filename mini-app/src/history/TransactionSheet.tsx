@@ -47,7 +47,7 @@ export function TransactionSheet({
   const [error, setError] = useState<string | null>(null)
 
   const canManage = canManageTransaction(user, transaction)
-  const revisionCount = useRevisionCount(client, transaction.id)
+  const revisionState = useRevisionCount(client, transaction.id)
 
   function patch(next: Partial<TransactionEditValues>): void {
     setValues((current) => ({ ...current, ...next }))
@@ -90,7 +90,7 @@ export function TransactionSheet({
       style={{ background: 'rgba(0,0,0,0.4)' }}
     >
       <div className="flex flex-col gap-3 rounded-t-2xl p-4" style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}>
-        <TransactionHeader transaction={transaction} exponents={bootstrap.currencies} revisionCount={revisionCount} />
+        <TransactionHeader transaction={transaction} exponents={bootstrap.currencies} revisionState={revisionState} />
 
         {canManage ? (
           <TransactionFields values={values} bootstrap={bootstrap} onChange={patch} />

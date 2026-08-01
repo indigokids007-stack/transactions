@@ -47,11 +47,17 @@ function buildParams(filters: HistoryFilters, cursor?: string): TransactionListP
 // bumps it, and `loadMore` captures the value at the moment it was called so a response
 // that settles after the filters have already moved on — whether it's the effect's own
 // fetch or a `loadMore` page — is recognised as stale and discarded rather than applied
-// to whatever list replaced it. `loadingMoreRef` is a second, narrower guard: a ref
-// rather than the `loading` state because two `loadMore` calls made back to back (the
+// to whatever list replaced it. `loadingMoreGenerationRef` is a second, narrower guard: a
+// ref rather than the `loading` state because two `loadMore` calls made back to back (the
 // observer firing twice before either request settles) read the same closure before
 // either state update has committed, so only a synchronously-set ref catches the second
-// one before it starts a duplicate request for the same cursor.
+// one before it starts a duplicate request for the same cursor. It holds the generation
+// that is currently loading a page rather than a plain boolean, so it is scoped to one
+// generation: a stale `loadMore` that never settles (its `finally` never runs) cannot
+// leave a *newer* generation's pagination permanently disabled, and a stale one that does
+// eventually settle cannot clear a newer generation's own in-flight guard out from under
+// it — `finally` below only clears the ref when it still names the request's own
+// generation.
 //
 // `filters.dimension` is an object a caller may recreate every render even when its
 // contents haven't changed, so the effect depends on its serialised form rather than its
@@ -71,7 +77,7 @@ export function useTransactions(client: ListTransactions, filters: HistoryFilter
   const [reloadToken, setReloadToken] = useState(0)
 
   const generationRef = useRef(0)
-  const loadingMoreRef = useRef(false)
+  const loadingMoreGenerationRef = useRef<number | null>(null)
 
   const dimensionKey = JSON.stringify(filters.dimension ?? {})
 
@@ -110,10 +116,10 @@ export function useTransactions(client: ListTransactions, filters: HistoryFilter
   ])
 
   async function loadMore(): Promise<void> {
-    if (!hasMore || cursor === null || loadingMoreRef.current) return
-
-    loadingMoreRef.current = true
     const generation = generationRef.current
+    if (!hasMore || cursor === null || loadingMoreGenerationRef.current === generation) return
+
+    loadingMoreGenerationRef.current = generation
     setLoading(true)
 
     try {
@@ -125,7 +131,9 @@ export function useTransactions(client: ListTransactions, filters: HistoryFilter
     } catch {
       if (generation === generationRef.current) setError(true)
     } finally {
-      loadingMoreRef.current = false
+      // Only release the guard this call itself set — a stale call whose generation has
+      // since moved on must never clear the *current* generation's own in-flight guard.
+      if (loadingMoreGenerationRef.current === generation) loadingMoreGenerationRef.current = null
       if (generation === generationRef.current) setLoading(false)
     }
   }

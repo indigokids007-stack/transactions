@@ -105,5 +105,7 @@ export const strings = {
     department: "Bo'lim",
     noDepartment: "Bo'lim yo'q",
     revisions: "O'zgarishlar soni",
+    revisionsLoading: '…',
+    revisionsFailed: "Yuklab bo'lmadi.",
   },
 } as const

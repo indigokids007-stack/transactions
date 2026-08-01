@@ -176,6 +176,31 @@ it('shows the amount, person, department and revision count read-only in the she
   expect(await within(dialog).findByTestId('revision-count')).toHaveTextContent('2')
 })
 
+// The review's finding: a failed revisions request used to render the exact same
+// placeholder as still-loading, with nothing the user could do about it. It must instead
+// read as a failure and offer a retry that actually refetches.
+it('offers a retry when the revision count fails to load, and retrying shows the count', async () => {
+  const client = clientWithTransactions([transaction])
+  client.revisions = vi
+    .fn()
+    .mockRejectedValueOnce(new Error('network'))
+    .mockResolvedValueOnce([
+      { id: 1, action: 'created', actor: { id: 1, name: 'Malika Karimova' }, snapshot: {}, created_at: '2026-07-15T00:00:00Z' },
+    ])
+  render(<HistoryScreen client={client} bootstrap={bootstrapFixture} user={ownerOfTransaction} />)
+
+  await userEvent.click(await screen.findByTestId('transaction-1'))
+  const dialog = screen.getByRole('dialog')
+  const revisionRow = await within(dialog).findByTestId('revision-count')
+
+  expect(await within(revisionRow).findByText(strings.history.revisionsFailed)).toBeInTheDocument()
+
+  await userEvent.click(within(revisionRow).getByRole('button', { name: strings.common.retry }))
+
+  await waitFor(() => expect(revisionRow).toHaveTextContent('1'))
+  expect(client.revisions).toHaveBeenCalledTimes(2)
+})
+
 describe('edit and delete visibility per role', () => {
   it('shows edit and delete on a staff member’s own row', async () => {
     const client = clientWithTransactions([transaction])

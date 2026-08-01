@@ -144,6 +144,50 @@ it('discards a stale loadMore page that settles after the filters changed', asyn
   expect(result.current.items.map((item) => item.id)).toEqual([2])
 })
 
+// Round 2's finding on the fix above: the guard `loadMore` sets before awaiting used to be
+// a single flag shared by every generation. If category A's page never settles at all (a
+// hung request, not merely a slow one), that flag was never released, so switching to
+// category B — which has its own next page to load — could never call `loadMore` again:
+// every call read the still-`true` flag left behind by A's abandoned request and returned
+// immediately. The guard must be scoped per generation so a stale, still-pending request
+// cannot lock out a newer one that never asked to share it.
+it('lets the new filter page even though the old filter’s stale request never settles', async () => {
+  const resolvers: Array<(page: CursorPage<ApiTransaction>) => void> = []
+  const listTransactions = vi.fn().mockImplementation(
+    () => new Promise<CursorPage<ApiTransaction>>((resolve) => resolvers.push(resolve)),
+  )
+  const client = { listTransactions }
+
+  const { result, rerender } = renderHook(({ filters }) => useTransactions(client, filters), {
+    initialProps: { filters: { category_id: 1 } },
+  })
+
+  await waitFor(() => expect(resolvers).toHaveLength(1))
+  act(() => resolvers[0]({ data: [transaction(1)], meta: { next_cursor: 'a-next' } }))
+  await waitFor(() => expect(result.current.hasMore).toBe(true))
+
+  // Category A's next page starts loading and never resolves.
+  act(() => {
+    void result.current.loadMore()
+  })
+  await waitFor(() => expect(resolvers).toHaveLength(2))
+
+  // The user switches to category B before A's stale request ever settles.
+  rerender({ filters: { category_id: 2 } })
+  await waitFor(() => expect(resolvers).toHaveLength(3))
+  act(() => resolvers[2]({ data: [transaction(2)], meta: { next_cursor: 'b-next' } }))
+  await waitFor(() => expect(result.current.hasMore).toBe(true))
+
+  // Category B's own loadMore must still fire a request rather than returning immediately
+  // because of a guard A's abandoned request left set. Not awaited: B's own request is
+  // left unresolved too, on purpose, so this only proves the request started.
+  act(() => {
+    void result.current.loadMore()
+  })
+
+  await waitFor(() => expect(listTransactions).toHaveBeenCalledTimes(4))
+})
+
 // The second half of the same finding: no loading guard meant the observer could ask
 // for the same cursor twice concurrently.
 it('does not start a second request while a loadMore call is already in flight', async () => {

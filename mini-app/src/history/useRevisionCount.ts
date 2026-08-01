@@ -1,31 +1,21 @@
-import { useEffect, useState } from 'react'
 import type { ApiClient } from '../api/client'
+import { useReportFetch } from '../reports/useReportFetch'
 
-// `null` while the count hasn't arrived yet (loading) or the call failed — the sheet
-// reads either as "nothing to show", since a placeholder guess would be worse than no
-// number at all. A genuine external read (the revisions endpoint), so a real effect, the
-// same as `SummaryView`'s own fetch: the `ignore` flag keeps a slow response for a row
-// the user has since closed from writing into state nothing is listening to anymore.
-export function useRevisionCount(client: Pick<ApiClient, 'revisions'>, transactionId: number): number | null {
-  const [count, setCount] = useState<number | null>(null)
+export type RevisionCountState =
+  | { status: 'loading' }
+  | { status: 'loaded'; count: number }
+  | { status: 'failed'; retry: () => void }
 
-  useEffect(() => {
-    let ignore = false
-    setCount(null)
+// A genuine external read (the revisions endpoint), so built on the same fetch-with-retry
+// effect `SummaryView`/`TrendView`/`StaffView` already share (`useReportFetch`) rather than
+// a bespoke one: same stale-response guard (`ignore`), same retry trigger. Loading and
+// failure used to both collapse to `null`, which read to the sheet as one indistinguishable
+// placeholder with nothing the user could do about a failure — this returns the three
+// states explicitly instead, `failed` carrying its own `retry`.
+export function useRevisionCount(client: Pick<ApiClient, 'revisions'>, transactionId: number): RevisionCountState {
+  const { data, failed, retry } = useReportFetch(() => client.revisions(transactionId), [client, transactionId])
 
-    client
-      .revisions(transactionId)
-      .then((revisions) => {
-        if (!ignore) setCount(revisions.length)
-      })
-      .catch(() => {
-        if (!ignore) setCount(null)
-      })
-
-    return () => {
-      ignore = true
-    }
-  }, [client, transactionId])
-
-  return count
+  if (failed) return { status: 'failed', retry }
+  if (data === null) return { status: 'loading' }
+  return { status: 'loaded', count: data.length }
 }
