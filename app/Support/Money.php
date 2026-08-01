@@ -61,13 +61,28 @@ class Money
         // transactions, and a float division (the previous implementation) silently rounds
         // past that point. `intdiv()`/`%` on two ints never leave the integer domain, so the
         // string built from them is exact regardless of magnitude.
+        //
+        // `$minor` is signed and PHP_INT_MIN has no positive int counterpart (its magnitude
+        // is one past PHP_INT_MAX), so `abs($minor)` would silently widen to a float and
+        // `intdiv()` would then throw. Dividing/moduloing `$minor` itself sidesteps that:
+        // PHP's `intdiv`/`%` truncate toward zero on negative operands, and since the
+        // exponent==0 case already returned above, `$divisor` is always >= 10 here, which
+        // keeps both the quotient and the remainder well clear of PHP_INT_MIN and safe to
+        // negate.
         $sign = $minor < 0 ? '-' : '';
-        $absolute = abs($minor);
         $divisor = 10 ** $exponent;
 
-        $whole = intdiv($absolute, $divisor);
-        $fraction = (string) ($absolute % $divisor);
+        $whole = intdiv($minor, $divisor);
+        $fraction = $minor % $divisor;
 
-        return $sign.$whole.'.'.str_pad($fraction, $exponent, '0', STR_PAD_LEFT);
+        if ($whole < 0) {
+            $whole = -$whole;
+        }
+
+        if ($fraction < 0) {
+            $fraction = -$fraction;
+        }
+
+        return $sign.$whole.'.'.str_pad((string) $fraction, $exponent, '0', STR_PAD_LEFT);
     }
 }

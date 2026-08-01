@@ -35,6 +35,41 @@ it('formats zero at a non-zero exponent with a padded fraction', function () {
     expect(Money::toDecimal(0, 'USD'))->toBe('0.00');
 });
 
+// The reviewer's live check: `Money::toDecimal(PHP_INT_MIN, 'USD')` used to throw a
+// TypeError. `amount_minor` is a signed bigint column, so PHP_INT_MIN is a value the
+// column can store even though the write path (CreateTransaction) never produces it
+// itself; the formatter serves API resources, the CSV export and the reports, so it has
+// to hold for the full signed 64-bit range regardless. The previous implementation built
+// the string from `abs($minor)`, and `abs(PHP_INT_MIN)` has no representable positive
+// int counterpart, so PHP silently widened it to a float, which `intdiv()` then rejected.
+it('formats PHP_INT_MIN at a non-zero exponent without overflowing abs()', function () {
+    expect(Money::toDecimal(PHP_INT_MIN, 'USD'))->toBe('-92233720368547758.08');
+});
+
+it('formats PHP_INT_MAX at a non-zero exponent', function () {
+    expect(Money::toDecimal(PHP_INT_MAX, 'USD'))->toBe('92233720368547758.07');
+});
+
+it('formats PHP_INT_MIN at a zero exponent', function () {
+    expect(Money::toDecimal(PHP_INT_MIN, 'UZS'))->toBe('-9223372036854775808');
+});
+
+it('formats PHP_INT_MAX at a zero exponent', function () {
+    expect(Money::toDecimal(PHP_INT_MAX, 'UZS'))->toBe('9223372036854775807');
+});
+
+it('pins the sign boundary around zero at a non-zero exponent', function () {
+    expect(Money::toDecimal(-1, 'USD'))->toBe('-0.01')
+        ->and(Money::toDecimal(0, 'USD'))->toBe('0.00')
+        ->and(Money::toDecimal(1, 'USD'))->toBe('0.01');
+});
+
+it('pins the sign boundary around zero at a zero exponent', function () {
+    expect(Money::toDecimal(-1, 'UZS'))->toBe('-1')
+        ->and(Money::toDecimal(0, 'UZS'))->toBe('0')
+        ->and(Money::toDecimal(1, 'UZS'))->toBe('1');
+});
+
 it('knows which currencies are supported', function () {
     expect(Money::isSupported('UZS'))->toBeTrue()
         ->and(Money::isSupported('XXX'))->toBeFalse();
