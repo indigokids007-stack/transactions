@@ -6,6 +6,7 @@ import { strings } from '../strings'
 import { formatMoneyString } from '../ui/Money'
 import { Toast } from '../ui/Toast'
 import { AmountKeypad } from './AmountKeypad'
+import { amountInputValue, groupDigitsForDisplay } from './amountInputFormat'
 import { CategoryChips } from './CategoryChips'
 import { DetailsSheet } from './DetailsSheet'
 import { parseAmount } from './parseAmount'
@@ -24,24 +25,6 @@ export type EntryScreenProps = {
    * parent when `canSave` actually flips, not on every keystroke.
    */
   onSaveStateChange?: (canSave: boolean, save: () => void) => void
-}
-
-// Groups a pure-digit string for display only (`120000` -> `120 000`). A value that
-// isn't all digits (a magnitude word, a typed separator) passes through untouched, so
-// `parseAmount`'s grammar keeps reading the exact characters the user typed.
-function groupDigitsForDisplay(raw: string): string {
-  return /^\d+$/.test(raw) ? raw.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : raw
-}
-
-// The field's `value` is the grouped display string above, so every keystroke's
-// `event.target.value` already carries whichever grouping spaces the last render put
-// there. Stripping whitespace undoes that grouping back to a clean digit run — but only
-// when the result is pure digits: a magnitude word or a `.`-separator amount (`30 ming`,
-// `12,50`) needs its own literal spacing to keep matching `parseAmount`'s grammar, so
-// anything that doesn't collapse to a clean digit run passes through verbatim.
-function amountInputValue(raw: string): string {
-  const stripped = raw.replace(/\s/g, '')
-  return /^\d+$/.test(stripped) ? stripped : raw
 }
 
 // The staff expense entry screen: a gradient amount header with the income/expense

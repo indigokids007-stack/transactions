@@ -1,26 +1,32 @@
 import type { Bootstrap } from '../api/types'
+import { amountInputValue, groupDigitsForDisplay } from '../entry/amountInputFormat'
 import { strings } from '../strings'
-import { flattenCategories } from './historyCategories'
+import { flattenCategoriesForType } from './historyCategories'
 import type { TransactionEditValues } from './transactionEdit'
 
 type TransactionFieldsProps = {
   values: TransactionEditValues
   bootstrap: Bootstrap
   onChange: (next: Partial<TransactionEditValues>) => void
+  /** True the moment the amount field holds text `parseAmount` refuses. */
+  amountInvalid: boolean
 }
 
 const TYPES = ['expense', 'income'] as const
 
-// The editable fields of one transaction — type, category, date, note, and every active
-// dimension — split out of `TransactionSheet` purely to keep that file's line count
-// down, the same way `DetailsSheet` holds the entry form's own fields separately from
-// `EntryScreen`. Amount and currency are not here: see `transactionEdit.ts`'s doc comment
-// for why — the currency control is `TransactionSheet`'s read-only header instead.
+// The editable fields of one transaction — type, category, amount, currency, date, note,
+// and every active dimension — split out of `TransactionSheet` purely to keep that
+// file's line count down, the same way `DetailsSheet` holds the entry form's own fields
+// separately from `EntryScreen`. Amount starts empty rather than pre-filled: see
+// `transactionEdit.ts`'s doc comment for why, and `TransactionSheet` for the validation
+// and "currency changed but no amount yet" gating this field's value feeds.
 const rowStyle = { background: 'var(--field)', borderRadius: 18, padding: '14px 16px' }
 const labelStyle = { font: '600 12px/1 "Plus Jakarta Sans"', color: 'var(--muted)' }
-const valueStyle = { border: 0, background: 'transparent', font: '700 14px/1 "Plus Jakarta Sans"', color: 'var(--teal-900)', outline: 'none', textAlign: 'right' as const }
+// 16px, not the design's 14px: iOS Safari zooms the whole page on focus for any input
+// under 16px, and every field here is a real `<input>`/`<select>` a thumb can tap.
+const valueStyle = { border: 0, background: 'transparent', font: '700 16px/1 "Plus Jakarta Sans"', color: 'var(--teal-900)', outline: 'none', textAlign: 'right' as const }
 
-export function TransactionFields({ values, bootstrap, onChange }: TransactionFieldsProps) {
+export function TransactionFields({ values, bootstrap, onChange, amountInvalid }: TransactionFieldsProps) {
   return (
     <div className="flex flex-col gap-[9px]">
       <div role="group" aria-label={strings.entry.type} className="flex gap-2">
@@ -44,6 +50,39 @@ export function TransactionFields({ values, bootstrap, onChange }: TransactionFi
         ))}
       </div>
 
+      <label className="flex items-center justify-between" style={amountInvalid ? { ...rowStyle, background: 'var(--field-warn)' } : rowStyle}>
+        <span style={labelStyle}>{strings.entry.amount}</span>
+        <input
+          type="text"
+          inputMode="decimal"
+          value={groupDigitsForDisplay(values.amountInput)}
+          onChange={(event) => onChange({ amountInput: amountInputValue(event.target.value) })}
+          placeholder={strings.history.amountUnchanged}
+          style={valueStyle}
+        />
+      </label>
+
+      {amountInvalid ? (
+        <p role="alert" className="text-sm" style={{ color: 'var(--expense)' }}>
+          {strings.entry.invalidAmount}
+        </p>
+      ) : null}
+
+      <label className="flex items-center justify-between" style={rowStyle}>
+        <span style={labelStyle}>{strings.entry.currency}</span>
+        <select
+          value={values.currency}
+          onChange={(event) => onChange({ currency: event.target.value })}
+          style={valueStyle}
+        >
+          {Object.keys(bootstrap.currencies).map((code) => (
+            <option key={code} value={code}>
+              {code}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <label className="flex items-center justify-between" style={rowStyle}>
         <span style={labelStyle}>{strings.entry.category}</span>
         <select
@@ -51,7 +90,7 @@ export function TransactionFields({ values, bootstrap, onChange }: TransactionFi
           onChange={(event) => onChange({ categoryId: Number(event.target.value) })}
           style={valueStyle}
         >
-          {flattenCategories(bootstrap.categories).map((category) => (
+          {flattenCategoriesForType(bootstrap.categories, values.type).map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
             </option>
@@ -76,7 +115,7 @@ export function TransactionFields({ values, bootstrap, onChange }: TransactionFi
           value={values.note}
           onChange={(event) => onChange({ note: event.target.value })}
           className="mt-2 block w-full"
-          style={{ border: 0, background: 'transparent', font: '600 14px/1 "Plus Jakarta Sans"', color: 'var(--ink)', outline: 'none' }}
+          style={{ border: 0, background: 'transparent', font: '600 16px/1 "Plus Jakarta Sans"', color: 'var(--ink)', outline: 'none' }}
         />
       </label>
 

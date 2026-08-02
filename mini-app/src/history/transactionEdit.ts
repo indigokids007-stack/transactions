@@ -3,20 +3,22 @@
 // `entryDefaults.ts`/`entryErrors.ts` are split out of `useEntryForm` — a distinct
 // concern (what changed) from the component that renders the fields.
 //
-// Amount is deliberately not editable here: the transaction's own `amount` field is
-// already formatted for display (`"10.00"` for a two-decimal currency), and running a
-// formatted amount back through `parseAmount`'s grammar — which reads `.` as a
-// thousands separator, never a decimal point — would silently produce a different
-// minor-unit amount than the one being displayed. That mismatch is exactly the
-// client/server amount-grammar drift the task brief calls out as the one risk worth
-// naming; leaving amount out of this form avoids it rather than papering over it.
+// Amount is the one field this form does not pre-fill from the transaction: the
+// transaction's own `amount` is already formatted for display (`"10.00"` for a
+// two-decimal currency), and running a formatted amount back through `parseAmount`'s
+// grammar — which reads `.` as a thousands separator, never a decimal point — would
+// silently produce a different minor-unit amount than the one being displayed. Instead
+// `amountInput` starts empty, the same "nothing typed yet" state `useEntryForm` starts
+// in, and stays a sentinel for "leave the amount alone": `diffValues` below only sends
+// `amount`/`currency` once the user has typed something `parseAmount` accepts. That
+// mirrors the create form's own field exactly rather than reparsing a value formatted
+// for reading.
 //
-// Currency is left out for the same reason amount is, and for one more of its own: the
-// server requires a new `amount` in the same request whenever `currency` changes
-// (`tests/Feature/Api/UpdateDeleteTransactionTest.php:105`), and this form has nowhere
-// to collect that amount without reopening the exact drift above. A currency control
-// with no way to satisfy the server's own rule is a control that always 422s, so it is
-// shown read-only in `TransactionSheet`'s header instead of offered here.
+// Currency changes ride along with amount for the same rule the server enforces on
+// create: a new `amount` must accompany any `currency` change
+// (`tests/Feature/Api/UpdateDeleteTransactionTest.php:105`). `TransactionSheet` gates
+// `save` on this — see its own comment — so a currency change reaches here only once a
+// valid amount sits alongside it.
 import type { ApiTransaction, TransactionWrite } from '../api/types'
 
 export type TransactionEditValues = {
@@ -25,6 +27,9 @@ export type TransactionEditValues = {
   note: string
   occurredOn: string
   dimensionValues: Record<number, number>
+  currency: string
+  /** Raw `parseAmount` input. Empty string is the sentinel for "not touched". */
+  amountInput: string
 }
 
 export function valuesFromTransaction(transaction: ApiTransaction): TransactionEditValues {
@@ -36,6 +41,8 @@ export function valuesFromTransaction(transaction: ApiTransaction): TransactionE
     dimensionValues: Object.fromEntries(
       transaction.dimension_values.map((value) => [value.dimension_id, value.value_id]),
     ),
+    currency: transaction.currency,
+    amountInput: '',
   }
 }
 
@@ -47,7 +54,19 @@ function dimensionsEqual(a: Record<number, number>, b: Record<number, number>): 
 // Only the fields that actually changed reach the server: an edit sheet opened and
 // closed without touching anything sends an empty `PATCH` body's worth of nothing, and
 // a note-only edit never re-sends the category, type or dimension picks alongside it.
-export function diffValues(original: TransactionEditValues, current: TransactionEditValues): TransactionWrite {
+//
+// `parsedAmount` is `current.amountInput` already run through `parseAmount` by the
+// caller (`TransactionSheet`, which also owns the "invalid" and "currency changed with
+// no amount typed" gates that keep an unparseable or incomplete edit from reaching
+// here at all). Amount and currency travel together whenever `parsedAmount` is not
+// null, satisfying the server's "amount must accompany any currency change" rule
+// unconditionally — including the case where only the amount changed and the currency
+// did not, which costs nothing since the value sent is the current one either way.
+export function diffValues(
+  original: TransactionEditValues,
+  current: TransactionEditValues,
+  parsedAmount: string | null,
+): TransactionWrite {
   const changes: TransactionWrite = {}
 
   if (current.type !== original.type) changes.type = current.type
@@ -56,6 +75,10 @@ export function diffValues(original: TransactionEditValues, current: Transaction
   if (current.occurredOn !== original.occurredOn) changes.occurred_on = current.occurredOn
   if (!dimensionsEqual(current.dimensionValues, original.dimensionValues)) {
     changes.dimension_values = current.dimensionValues
+  }
+  if (parsedAmount !== null) {
+    changes.amount = parsedAmount
+    changes.currency = current.currency
   }
 
   return changes

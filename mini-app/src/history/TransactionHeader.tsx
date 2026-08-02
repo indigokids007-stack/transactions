@@ -9,12 +9,12 @@ type TransactionHeaderProps = {
   revisionState: RevisionCountState
 }
 
-// The full-record facts no edit form ever shows: the amount (never editable — see
-// `transactionEdit.ts`'s doc comment), whose record it is, which department it belongs
-// to, and how many times it has been revised. Shown regardless of
-// `canManageTransaction`'s answer, since "amount editing is out of scope" never meant
-// "hide the amount", only "don't offer to change it" — the same reasoning that keeps the
-// currency visible here after Fix 2 removed it as an editable control.
+// The full record as it stands on the server right now: the amount, whose record it is,
+// which department it belongs to, and how many times it has been revised. This always
+// shows the transaction prop as last loaded, not the edit form's in-progress `values` —
+// `TransactionFields`' own amount/currency fields are where an edit in progress lives,
+// and this header catches up once `onSaved` swaps in the server's response. Shown
+// regardless of `canManageTransaction`'s answer: a read-only viewer still sees the record.
 export function TransactionHeader({ transaction, exponents, revisionState }: TransactionHeaderProps) {
   const income = transaction.type === 'income'
   return (

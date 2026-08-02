@@ -22,7 +22,9 @@ const fieldRowStyle = (warn: boolean): { background: string; borderRadius: numbe
 })
 
 const labelStyle = { font: '600 12px/1 "Plus Jakarta Sans"', color: 'var(--muted)' }
-const valueStyle = { border: 0, background: 'transparent', font: '700 14px/1 "Plus Jakarta Sans"', color: 'var(--teal-900)', outline: 'none', textAlign: 'right' as const }
+// 16px, not the design's 14px: iOS Safari zooms the whole page on focus for any input
+// under 16px, and every field here is a real `<input>`/`<select>` a thumb can tap.
+const valueStyle = { border: 0, background: 'transparent', font: '700 16px/1 "Plus Jakarta Sans"', color: 'var(--teal-900)', outline: 'none', textAlign: 'right' as const }
 
 // Currency, date, note, and one row per active dimension — everything the keypad and the
 // category chips don't cover. Type moved to `EntryScreen`'s gradient header (income
@@ -66,7 +68,7 @@ export function DetailsSheet({
           value={values.note}
           onChange={(event) => onNoteChange(event.target.value)}
           className="mt-2 block w-full"
-          style={{ border: 0, background: 'transparent', font: '600 14px/1 "Plus Jakarta Sans"', color: 'var(--ink)', outline: 'none' }}
+          style={{ border: 0, background: 'transparent', font: '600 16px/1 "Plus Jakarta Sans"', color: 'var(--ink)', outline: 'none' }}
         />
       </label>
 

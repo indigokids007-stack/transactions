@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ApiClient } from '../api/client'
 import type { ApiTransaction, ApiUser, Bootstrap } from '../api/types'
+import { parseAmount } from '../entry/parseAmount'
 import { strings } from '../strings'
 import { TransactionFields } from './TransactionFields'
 import { TransactionHeader } from './TransactionHeader'
@@ -49,16 +50,28 @@ export function TransactionSheet({
   const canManage = canManageTransaction(user, transaction)
   const revisionState = useRevisionCount(client, transaction.id)
 
+  // `''` means "amount not touched" (see `transactionEdit.ts`'s doc comment); anything
+  // else must parse or the field is showing text `parseAmount` refuses.
+  const parsedAmount = values.amountInput === '' ? null : (parseAmount(values.amountInput)?.amount ?? null)
+  const amountInvalid = values.amountInput !== '' && parsedAmount === null
+  // The server requires a fresh `amount` alongside any `currency` change; a changed
+  // currency with nothing typed in the amount field yet is not a state `diffValues` can
+  // turn into a valid request, so `save` stays disabled until one arrives.
+  const currencyNeedsAmount = values.currency !== original.currency && parsedAmount === null
+  const canSave = !amountInvalid && !currencyNeedsAmount
+
   function patch(next: Partial<TransactionEditValues>): void {
     setValues((current) => ({ ...current, ...next }))
   }
 
   async function save(): Promise<void> {
+    if (!canSave) return
+
     setSaving(true)
     setError(null)
 
     try {
-      const response = await client.updateTransaction(transaction.id, diffValues(original, values))
+      const response = await client.updateTransaction(transaction.id, diffValues(original, values, parsedAmount))
       onSaved(response.data)
     } catch (caught) {
       setError(readMessage(caught, strings.history.actionFailed))
@@ -108,10 +121,16 @@ export function TransactionSheet({
         <TransactionHeader transaction={transaction} exponents={bootstrap.currencies} revisionState={revisionState} />
 
         {canManage ? (
-          <TransactionFields values={values} bootstrap={bootstrap} onChange={patch} />
+          <TransactionFields values={values} bootstrap={bootstrap} onChange={patch} amountInvalid={amountInvalid} />
         ) : (
           <TransactionSummary transaction={transaction} dimensions={bootstrap.dimensions} />
         )}
+
+        {canManage && currencyNeedsAmount ? (
+          <p role="alert" className="text-sm" style={{ color: 'var(--expense)' }}>
+            {strings.history.currencyNeedsAmount}
+          </p>
+        ) : null}
 
         {error ? (
           <p role="alert" className="text-sm" style={{ color: 'var(--expense)' }}>
@@ -131,7 +150,7 @@ export function TransactionSheet({
           {canManage ? (
             <button
               type="button"
-              disabled={saving}
+              disabled={saving || !canSave}
               onClick={() => void save()}
               className="flex-1 text-center disabled:opacity-50"
               style={{

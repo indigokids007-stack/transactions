@@ -134,29 +134,38 @@ it('sends a chosen custom range to the transaction list', async () => {
   )
 })
 
-// The currency control used to accept a new value and send only `{ currency }`, which
-// the backend always refuses (a currency change must carry the amount it applies to —
-// `tests/Feature/Api/UpdateDeleteTransactionTest.php:105`). Amount editing is out of
-// scope, so the fix is removing the control rather than growing the form to satisfy the
-// backend's rule.
-it('does not offer a currency control the api would always refuse', async () => {
+// A currency change alone always 422s server-side (a currency change must carry the
+// amount it applies to — `tests/Feature/Api/UpdateDeleteTransactionTest.php:105`), so the
+// sheet blocks that request from ever leaving the client rather than sending it and
+// showing the server's refusal.
+it('blocks save when the currency changed but no amount was typed', async () => {
   const client = clientWithTransactions([transaction])
   render(<HistoryScreen client={client} bootstrap={bootstrapFixture} user={ownerOfTransaction} />)
 
   await userEvent.click(await screen.findByTestId('transaction-1'))
   const dialog = screen.getByRole('dialog')
 
-  // Both the history filter bar and the edit form once used the same "Valyuta" label,
-  // so the query is scoped to the sheet: the filter's own currency select is expected to
-  // stay untouched by this fix.
-  expect(within(dialog).queryByLabelText(strings.entry.currency)).not.toBeInTheDocument()
+  await userEvent.selectOptions(within(dialog).getByLabelText(strings.entry.currency), 'USD')
 
-  await userEvent.clear(screen.getByLabelText(strings.entry.note))
-  await userEvent.type(screen.getByLabelText(strings.entry.note), 'tuzatildi')
-  await userEvent.click(screen.getByRole('button', { name: strings.common.save }))
+  expect(within(dialog).getByText(strings.history.currencyNeedsAmount)).toBeInTheDocument()
+  expect(within(dialog).getByRole('button', { name: strings.common.save })).toBeDisabled()
+  expect(client.updateTransaction).not.toHaveBeenCalled()
+})
 
-  const [, body] = (client.updateTransaction as ReturnType<typeof vi.fn>).mock.calls[0] as [number, object]
-  expect(body).not.toHaveProperty('currency')
+// Typing a new amount alongside a new currency is exactly the combination the backend's
+// rule demands, and both must travel in the same request.
+it('sends amount and currency together when both were changed', async () => {
+  const client = clientWithTransactions([transaction])
+  render(<HistoryScreen client={client} bootstrap={bootstrapFixture} user={ownerOfTransaction} />)
+
+  await userEvent.click(await screen.findByTestId('transaction-1'))
+  const dialog = screen.getByRole('dialog')
+
+  await userEvent.selectOptions(within(dialog).getByLabelText(strings.entry.currency), 'USD')
+  await userEvent.type(within(dialog).getByLabelText(strings.entry.amount), '125')
+  await userEvent.click(within(dialog).getByRole('button', { name: strings.common.save }))
+
+  expect(client.updateTransaction).toHaveBeenCalledWith(1, { amount: '125', currency: 'USD' })
 })
 
 // The sheet used to show only the editable fields and the actions; the full record

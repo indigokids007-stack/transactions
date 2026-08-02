@@ -109,6 +109,13 @@ export const strings = {
     empty: "Bu davr uchun yozuvlar yo'q.",
     loadFailed: "Tarixni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
     deleteConfirm: "Haqiqatan ham o'chirmoqchimisiz?",
+    // Shown under the edit form's save button when the currency was changed but the
+    // amount field is still empty — the server requires a fresh amount alongside any
+    // currency change (`transactionEdit.ts`'s doc comment).
+    currencyNeedsAmount: "Valyutani o'zgartirish uchun summani kiriting.",
+    // The edit form's amount field placeholder: unlike every other field here, amount
+    // starts empty (not pre-filled with the current value) and this text says why.
+    amountUnchanged: "O'zgarishsiz qoladi",
     // Shown for any save/delete failure that isn't a validation 422 — the server's own
     // `message` (a 403/404 refusal, or anything else) reaches the user verbatim rather
     // than being replaced with a client-side guess about why it failed.

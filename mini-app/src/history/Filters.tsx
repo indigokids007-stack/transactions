@@ -24,7 +24,9 @@ function toId(raw: string): number | undefined {
 
 const rowStyle = { background: 'var(--field)', borderRadius: 16, padding: '12px 15px' }
 const labelStyle = { font: '600 12px/1 "Plus Jakarta Sans"', color: 'var(--muted)' }
-const valueStyle = { border: 0, background: 'transparent', font: '700 13px/1 "Plus Jakarta Sans"', color: 'var(--teal-900)', outline: 'none', textAlign: 'right' as const }
+// 16px, not the design's 13px: iOS Safari zooms the whole page on focus for any input
+// under 16px, and every field here is a real `<select>` a thumb can tap.
+const valueStyle = { border: 0, background: 'transparent', font: '700 16px/1 "Plus Jakarta Sans"', color: 'var(--teal-900)', outline: 'none', textAlign: 'right' as const }
 
 // The history list's own filter row: the period picker it shares with Reports (always
 // visible), plus category, currency and one select per active dimension (collapsible —
