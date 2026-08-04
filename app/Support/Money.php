@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Currency;
 use InvalidArgumentException;
 
 class Money
@@ -28,7 +29,7 @@ class Money
 
     public static function exponent(string $currency): int
     {
-        $exponent = config("money.currencies.{$currency}");
+        $exponent = Currency::exponents()[$currency] ?? null;
 
         if ($exponent === null) {
             throw new InvalidArgumentException("Unsupported currency `{$currency}`.");
@@ -39,7 +40,7 @@ class Money
 
     public static function isSupported(string $currency): bool
     {
-        return config("money.currencies.{$currency}") !== null;
+        return array_key_exists($currency, Currency::exponents());
     }
 
     public static function toMinor(string $amount, string $currency): int

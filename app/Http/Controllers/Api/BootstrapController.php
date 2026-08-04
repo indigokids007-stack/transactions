@@ -7,6 +7,7 @@ use App\Http\Resources\CategoryResource;
 use App\Http\Resources\DimensionResource;
 use App\Http\Resources\UserResource;
 use App\Models\Category;
+use App\Models\Currency;
 use App\Models\Dimension;
 use App\Models\User;
 use App\Support\StickyDefaults;
@@ -25,7 +26,7 @@ class BootstrapController extends Controller
             'user' => UserResource::make($user->loadMissing(['department', 'managedDepartments'])),
             'categories' => CategoryResource::collection($this->categoryTree()),
             'dimensions' => DimensionResource::collection($this->activeDimensions()),
-            'currencies' => config('money.currencies'),
+            'currencies' => Currency::exponents(),
             'defaults' => StickyDefaults::for($user),
         ];
     }

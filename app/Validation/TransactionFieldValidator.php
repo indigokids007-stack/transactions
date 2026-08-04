@@ -37,7 +37,7 @@ class TransactionFieldValidator
         return [
             'type' => [$presence, Rule::enum(TransactionType::class)],
             'amount' => [$presence, 'regex:'.Money::AMOUNT_PATTERN, 'not_in:0,0.0,0.00'],
-            'currency' => [$presence, 'string', 'size:3', Rule::in(array_keys(config('money.currencies')))],
+            'currency' => [$presence, 'string', 'size:3', Rule::exists('currencies', 'code')->where('is_active', true)],
             'occurred_on' => [$presence, 'date', 'before_or_equal:'.now()->addDay()->toDateString()],
             'category_id' => [$presence, 'integer', Rule::exists('categories', 'id')->where('is_active', true)],
             'note' => ['sometimes', 'nullable', 'string', 'max:1000'],

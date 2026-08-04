@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Currency;
 use App\Support\Money;
 
 it('converts decimal amounts to minor units by currency exponent', function () {
@@ -73,4 +74,22 @@ it('pins the sign boundary around zero at a zero exponent', function () {
 it('knows which currencies are supported', function () {
     expect(Money::isSupported('UZS'))->toBeTrue()
         ->and(Money::isSupported('XXX'))->toBeFalse();
+});
+
+it('picks up a currency added after the exponent map was first cached', function () {
+    Money::isSupported('UZS');
+
+    Currency::factory()->create(['code' => 'GBP', 'exponent' => 2]);
+
+    expect(Money::isSupported('GBP'))->toBeTrue()
+        ->and(Money::toDecimal(150, 'GBP'))->toBe('1.50');
+});
+
+it('drops a deleted currency from the exponent map', function () {
+    $currency = Currency::factory()->create(['code' => 'GBP', 'exponent' => 2]);
+    Money::isSupported('GBP');
+
+    $currency->delete();
+
+    expect(Money::isSupported('GBP'))->toBeFalse();
 });

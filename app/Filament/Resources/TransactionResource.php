@@ -6,6 +6,7 @@ use App\Enums\TransactionType;
 use App\Filament\Resources\TransactionResource\Pages\ListTransactions;
 use App\Filament\Resources\TransactionResource\Pages\ViewTransaction;
 use App\Filament\Resources\TransactionResource\RelationManagers\RevisionsRelationManager;
+use App\Models\Currency;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Support\Money;
@@ -134,7 +135,7 @@ class TransactionResource extends Resource
                     ->label('Category')
                     ->relationship('category', 'name'),
                 SelectFilter::make('currency')
-                    ->options(array_combine(array_keys(config('money.currencies')), array_keys(config('money.currencies')))),
+                    ->options(fn (): array => Currency::query()->orderBy('sort')->pluck('code', 'code')->all()),
                 SelectFilter::make('user_id')
                     ->label('Staff')
                     ->relationship('user', 'name'),

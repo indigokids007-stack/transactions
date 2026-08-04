@@ -27,7 +27,7 @@ class TransactionFilterRequest extends FormRequest
             'to' => ['nullable', 'date', 'after_or_equal:from'],
             'type' => ['nullable', Rule::enum(TransactionType::class)],
             'category_id' => ['nullable', 'integer', Rule::exists('categories', 'id')],
-            'currency' => ['nullable', 'string', 'size:3', Rule::in(array_keys(config('money.currencies')))],
+            'currency' => ['nullable', 'string', 'size:3', Rule::exists('currencies', 'code')],
             'user_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'department_id' => ['nullable', 'integer', Rule::exists('departments', 'id')],
             'dimension' => ['array'],
