@@ -6,6 +6,7 @@ import { strings } from '../strings'
 import { formatMoneyString } from '../ui/Money'
 import { Toast } from '../ui/Toast'
 import { AmountKeypad } from './AmountKeypad'
+import { QuantityField } from './QuantityField'
 import { amountInputValue, groupDigitsForDisplay } from './amountInputFormat'
 import { CategoryChips } from './CategoryChips'
 import { DetailsSheet } from './DetailsSheet'
@@ -175,6 +176,10 @@ export function EntryScreen({ bootstrap, client, onSaveStateChange }: EntryScree
         defaultId={bootstrap.defaults.category_id}
         onSelect={form.setCategory}
       />
+
+      <div style={{ padding: '0 22px 12px' }}>
+        <QuantityField value={form.values.quantityInput} onChange={form.setQuantity} />
+      </div>
 
       <AmountKeypad value={form.values.amountInput} onChange={form.setAmount} />
 

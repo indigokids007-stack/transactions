@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import type { ApiTransaction } from '../api/types'
 import { strings } from '../strings'
+import { formatQuantity } from '../entry/parseQuantity'
 import { formatMoney } from '../ui/Money'
 
 export type TransactionListProps = {
@@ -124,7 +125,7 @@ export function TransactionList({ items, exponents, hasMore, onLoadMore, onSelec
                       {item.category.name}
                     </span>
                     <span className="mt-1 block" style={{ font: '500 11px/1 "Plus Jakarta Sans"', color: 'var(--muted-2)' }}>
-                      {strings.entry[item.type]} · {item.occurred_on}
+                      {strings.entry[item.type]} · {item.occurred_on}{item.quantity_kg ? ` · ${formatQuantity(item.quantity_kg)} kg` : ''}
                     </span>
                   </span>
                   <span

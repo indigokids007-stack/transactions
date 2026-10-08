@@ -23,6 +23,7 @@ class RecordRevision
                 'occurred_on' => $transaction->occurred_on->toDateString(),
                 'category_id' => $transaction->category_id,
                 'note' => $transaction->note,
+                'quantity_kg' => $transaction->quantity_kg,
                 'user_id' => $transaction->user_id,
                 'department_id' => $transaction->department_id,
                 'dimension_values' => $transaction->dimensionValues

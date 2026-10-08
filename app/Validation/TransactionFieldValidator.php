@@ -8,6 +8,7 @@ use App\Models\Dimension;
 use App\Models\DimensionValue;
 use App\Support\Concerns\ReadsArrayValues;
 use App\Support\Money;
+use App\Support\Quantity;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Validator as ValidatorFactory;
@@ -41,6 +42,7 @@ class TransactionFieldValidator
             'occurred_on' => [$presence, 'date', 'before_or_equal:'.now()->addDay()->toDateString()],
             'category_id' => [$presence, 'integer', Rule::exists('categories', 'id')->where('is_active', true)],
             'note' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'quantity_kg' => ['sometimes', 'nullable', 'string', 'regex:'.Quantity::PATTERN, 'not_regex:/^0(?:\.0+)?$/D'],
             'dimension_values' => ['sometimes', 'array'],
             'dimension_values.*' => ['integer'],
         ];

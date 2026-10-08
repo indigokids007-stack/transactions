@@ -20,6 +20,7 @@
 // `save` on this — see its own comment — so a currency change reaches here only once a
 // valid amount sits alongside it.
 import type { ApiTransaction, TransactionWrite } from '../api/types'
+import { parseQuantity, formatQuantity } from '../entry/parseQuantity'
 
 export type TransactionEditValues = {
   type: 'income' | 'expense'
@@ -29,6 +30,7 @@ export type TransactionEditValues = {
   dimensionValues: Record<number, number>
   currency: string
   /** Raw `parseAmount` input. Empty string is the sentinel for "not touched". */
+  quantityInput: string
   amountInput: string
 }
 
@@ -42,6 +44,7 @@ export function valuesFromTransaction(transaction: ApiTransaction): TransactionE
       transaction.dimension_values.map((value) => [value.dimension_id, value.value_id]),
     ),
     currency: transaction.currency,
+    quantityInput: transaction.quantity_kg ? formatQuantity(transaction.quantity_kg) : '',
     amountInput: '',
   }
 }
@@ -69,6 +72,7 @@ export function diffValues(
 ): TransactionWrite {
   const changes: TransactionWrite = {}
 
+  if (current.quantityInput !== original.quantityInput) changes.quantity_kg = parseQuantity(current.quantityInput)
   if (current.type !== original.type) changes.type = current.type
   if (current.categoryId !== original.categoryId) changes.category_id = current.categoryId
   if (current.note !== original.note) changes.note = current.note === '' ? null : current.note

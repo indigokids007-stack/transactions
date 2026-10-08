@@ -1,4 +1,5 @@
 import type { Bootstrap } from '../api/types'
+import { QuantityField } from '../entry/QuantityField'
 import { amountInputValue, groupDigitsForDisplay } from '../entry/amountInputFormat'
 import { strings } from '../strings'
 import { flattenCategoriesForType } from './historyCategories'
@@ -29,6 +30,7 @@ const valueStyle = { border: 0, background: 'transparent', font: '700 16px/1 "Pl
 export function TransactionFields({ values, bootstrap, onChange, amountInvalid }: TransactionFieldsProps) {
   return (
     <div className="flex flex-col gap-[9px]">
+      <QuantityField value={values.quantityInput} onChange={(quantityInput) => onChange({ quantityInput })} />
       <div role="group" aria-label={strings.entry.type} className="flex gap-2">
         {TYPES.map((type) => (
           <button

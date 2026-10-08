@@ -49,6 +49,7 @@ class StoreTransactionRequest extends FormRequest
             note: $this->filled('note') ? $this->string('note')->toString() : null,
             dimensionValues: $this->dimensionValues(),
             idempotencyKey: $this->idempotencyKey(),
+            quantityKg: $this->filled('quantity_kg') ? $this->string('quantity_kg')->toString() : null,
         );
     }
 

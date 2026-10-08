@@ -502,6 +502,7 @@ it('records a created revision holding the full snapshot', function () {
             'department_id' => $department->id,
             'dimension_values' => [$branch->id => $value->id],
             'deleted_at' => null,
+            'quantity_kg' => null,
         ]);
 });
 

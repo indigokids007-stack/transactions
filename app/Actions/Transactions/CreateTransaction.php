@@ -7,6 +7,7 @@ use App\Enums\RevisionAction;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Support\Money;
+use App\Support\Quantity;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -28,6 +29,7 @@ class CreateTransaction
                 'occurred_on' => $input->occurredOn,
                 'category_id' => $input->categoryId,
                 'note' => $input->note,
+                'quantity_kg' => Quantity::normalize($input->quantityKg),
                 'created_by' => $actor->id,
                 'idempotency_key' => $input->idempotencyKey,
             ]);

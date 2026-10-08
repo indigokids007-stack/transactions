@@ -22,6 +22,7 @@ class TransactionResource extends JsonResource
             'currency' => $this->currency,
             'occurred_on' => $this->occurred_on->toDateString(),
             'note' => $this->note,
+            'quantity_kg' => $this->quantity_kg,
             'category' => [
                 'id' => $this->category->id,
                 'name' => $this->category->name,

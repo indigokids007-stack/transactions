@@ -25,6 +25,7 @@ class Transaction extends Model
         'occurred_on',
         'category_id',
         'note',
+        'quantity_kg',
         'created_by',
         'idempotency_key',
     ];
@@ -35,6 +36,7 @@ class Transaction extends Model
             'type' => TransactionType::class,
             'occurred_on' => 'date',
             'amount_minor' => 'integer',
+            'quantity_kg' => 'decimal:3',
         ];
     }
 

@@ -25,5 +25,6 @@ readonly class TransactionInput
         public ?string $note = null,
         public array $dimensionValues = [],
         public ?string $idempotencyKey = null,
+        public ?string $quantityKg = null,
     ) {}
 }

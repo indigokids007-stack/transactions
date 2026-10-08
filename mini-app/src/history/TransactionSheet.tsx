@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { ApiClient } from '../api/client'
 import type { ApiTransaction, ApiUser, Bootstrap } from '../api/types'
 import { parseAmount } from '../entry/parseAmount'
+import { parseQuantity } from '../entry/parseQuantity'
 import { strings } from '../strings'
 import { TransactionFields } from './TransactionFields'
 import { TransactionHeader } from './TransactionHeader'
@@ -58,7 +59,8 @@ export function TransactionSheet({
   // currency with nothing typed in the amount field yet is not a state `diffValues` can
   // turn into a valid request, so `save` stays disabled until one arrives.
   const currencyNeedsAmount = values.currency !== original.currency && parsedAmount === null
-  const canSave = !amountInvalid && !currencyNeedsAmount
+  const quantityInvalid = values.quantityInput.trim() !== '' && parseQuantity(values.quantityInput) === null
+  const canSave = !amountInvalid && !currencyNeedsAmount && !quantityInvalid
 
   function patch(next: Partial<TransactionEditValues>): void {
     setValues((current) => ({ ...current, ...next }))

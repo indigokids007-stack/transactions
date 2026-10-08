@@ -92,6 +92,9 @@ class TransactionResource extends Resource
             TextEntry::make('amount_minor')
                 ->label('Amount')
                 ->formatStateUsing(fn (Transaction $record): string => Money::toDecimal($record->amount_minor, $record->currency).' '.$record->currency),
+            TextEntry::make('quantity_kg')
+                ->label('Miqdor (kg)')
+                ->placeholder('—'),
             TextEntry::make('note')
                 ->placeholder('—'),
         ]);
@@ -114,6 +117,10 @@ class TransactionResource extends Resource
                 TextColumn::make('amount_minor')
                     ->label('Amount')
                     ->formatStateUsing(fn (Transaction $record): string => Money::toDecimal($record->amount_minor, $record->currency).' '.$record->currency)
+                    ->sortable(),
+                TextColumn::make('quantity_kg')
+                    ->label('Miqdor (kg)')
+                    ->placeholder('—')
                     ->sortable(),
                 TextColumn::make('note')
                     ->limit(40)

@@ -23,6 +23,16 @@ trait ValidatesTransactionFields
         return $this->transactionFieldValidator()->rules($presence);
     }
 
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return [
+            'quantity_kg.string' => __('errors.quantity_kg_invalid'),
+            'quantity_kg.regex' => __('errors.quantity_kg_invalid'),
+            'quantity_kg.not_regex' => __('errors.quantity_kg_invalid'),
+        ];
+    }
+
     /** @return array<int, int> */
     public function dimensionValues(): array
     {

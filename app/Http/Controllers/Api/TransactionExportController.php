@@ -89,6 +89,8 @@ class TransactionExportController extends Controller
             $header[] = $dimension->key;
         }
 
+        $header[] = 'quantity_kg';
+
         return $header;
     }
 
@@ -116,6 +118,8 @@ class TransactionExportController extends Controller
             $value = $valuesByDimension->get($dimension->id);
             $row[] = $value instanceof DimensionValue ? $this->neutralize($value->name) : '';
         }
+
+        $row[] = $transaction->quantity_kg ?? '';
 
         return $row;
     }

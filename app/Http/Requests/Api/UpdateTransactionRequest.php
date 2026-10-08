@@ -81,6 +81,10 @@ class UpdateTransactionRequest extends FormRequest
             $changes['note'] = $this->filled('note') ? $this->string('note')->toString() : null;
         }
 
+        if ($this->has('quantity_kg')) {
+            $changes['quantity_kg'] = $this->filled('quantity_kg') ? $this->string('quantity_kg')->toString() : null;
+        }
+
         return $changes;
     }
 

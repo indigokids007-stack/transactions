@@ -6,6 +6,7 @@ use App\Enums\RevisionAction;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Support\Money;
+use App\Support\Quantity;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -17,7 +18,7 @@ class UpdateTransaction
      * absent: who a transaction belongs to, and the department snapshot taken from
      * them, are settled at creation and never re-decided by an editor.
      */
-    private const UPDATABLE = ['type', 'amount_minor', 'currency', 'occurred_on', 'category_id', 'note'];
+    private const UPDATABLE = ['type', 'amount_minor', 'currency', 'occurred_on', 'category_id', 'note', 'quantity_kg'];
 
     public function __construct(private readonly RecordRevision $recordRevision) {}
 
@@ -28,6 +29,10 @@ class UpdateTransaction
     public function handle(Transaction $transaction, array $changes, ?array $dimensionValues, User $actor): Transaction
     {
         $this->assertAmountIsWritable($transaction, $changes);
+
+        if (array_key_exists('quantity_kg', $changes)) {
+            $changes['quantity_kg'] = Quantity::normalize($changes['quantity_kg']);
+        }
 
         return DB::transaction(function () use ($transaction, $changes, $dimensionValues, $actor): Transaction {
             $transaction->fill(Arr::only($changes, self::UPDATABLE))->save();

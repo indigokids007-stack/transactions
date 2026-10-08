@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'quantity_kg_invalid' => 'Miqdor noldan katta bo‘lishi kerak. Masalan: 2.5 kg (3 tagacha kasr raqami).',
     'not_active' => 'Hisobingiz faol emas.',
     'registration_closed' => 'Roʻyxatdan oʻtish yopiq.',
     'blocked' => 'Hisobingiz bloklangan.',
