@@ -21,6 +21,7 @@ export type EntryForm = {
   dimensions: Bootstrap['dimensions']
   currencies: Bootstrap['currencies']
   setQuantity: (input: string) => void
+  setQuantityUnit: (unit: EntryValues['quantityUnit']) => void
   setAmount: (input: string) => void
   setCategory: (id: number) => void
   setDimension: (dimensionId: number, valueId: number) => void
@@ -65,6 +66,7 @@ export function useEntryForm(bootstrap: Bootstrap, client: ApiClient): EntryForm
     setValues((current) => ({ ...current, ...next }))
   }
 
+  const setQuantityUnit = (unit: EntryValues['quantityUnit']): void => patch({ quantityUnit: unit })
   const setQuantity = (input: string): void => patch({ quantityInput: input })
   const setAmount = (input: string): void => patch({ amountInput: input })
   const setCategory = (id: number): void => patch({ categoryId: id })
@@ -126,7 +128,7 @@ export function useEntryForm(bootstrap: Bootstrap, client: ApiClient): EntryForm
       occurred_on: values.occurredOn,
       category_id: values.categoryId ?? undefined,
       note: values.note === '' ? null : values.note,
-      ...(parsedQuantity !== null ? { quantity_kg: parsedQuantity } : {}),
+      ...(parsedQuantity !== null ? { quantity: parsedQuantity, quantity_unit: values.quantityUnit } : {}),
       dimension_values: values.dimensionValues,
     }
 
@@ -156,6 +158,7 @@ export function useEntryForm(bootstrap: Bootstrap, client: ApiClient): EntryForm
     dimensions: reference.dimensions,
     currencies: reference.currencies,
     setQuantity,
+    setQuantityUnit,
     setAmount,
     setCategory,
     setDimension,

@@ -178,7 +178,7 @@ export function EntryScreen({ bootstrap, client, onSaveStateChange }: EntryScree
       />
 
       <div style={{ padding: '0 22px 12px' }}>
-        <QuantityField value={form.values.quantityInput} onChange={form.setQuantity} />
+        <QuantityField value={form.values.quantityInput} unit={form.values.quantityUnit} onChange={form.setQuantity} onUnitChange={form.setQuantityUnit} />
       </div>
 
       <AmountKeypad value={form.values.amountInput} onChange={form.setAmount} />

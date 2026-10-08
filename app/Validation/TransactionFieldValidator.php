@@ -42,6 +42,8 @@ class TransactionFieldValidator
             'occurred_on' => [$presence, 'date', 'before_or_equal:'.now()->addDay()->toDateString()],
             'category_id' => [$presence, 'integer', Rule::exists('categories', 'id')->where('is_active', true)],
             'note' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'quantity' => ['nullable', 'required_with:quantity_unit', 'prohibits:quantity_kg', 'string', 'regex:'.Quantity::PATTERN, 'not_regex:/^0(?:\.0+)?$/D'],
+            'quantity_unit' => ['nullable', 'required_with:quantity', 'prohibits:quantity_kg', 'string', Rule::in(Quantity::UNITS)],
             'quantity_kg' => ['sometimes', 'nullable', 'string', 'regex:'.Quantity::PATTERN, 'not_regex:/^0(?:\.0+)?$/D'],
             'dimension_values' => ['sometimes', 'array'],
             'dimension_values.*' => ['integer'],

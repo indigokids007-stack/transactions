@@ -92,8 +92,9 @@ class TransactionResource extends Resource
             TextEntry::make('amount_minor')
                 ->label('Amount')
                 ->formatStateUsing(fn (Transaction $record): string => Money::toDecimal($record->amount_minor, $record->currency).' '.$record->currency),
-            TextEntry::make('quantity_kg')
-                ->label('Miqdor (kg)')
+            TextEntry::make('quantity')
+                ->label('Miqdor')
+                ->formatStateUsing(fn (Transaction $record): ?string => $record->quantity !== null ? rtrim(rtrim($record->quantity, '0'), '.').' '.$record->quantity_unit : null)
                 ->placeholder('—'),
             TextEntry::make('note')
                 ->placeholder('—'),
@@ -118,8 +119,9 @@ class TransactionResource extends Resource
                     ->label('Amount')
                     ->formatStateUsing(fn (Transaction $record): string => Money::toDecimal($record->amount_minor, $record->currency).' '.$record->currency)
                     ->sortable(),
-                TextColumn::make('quantity_kg')
-                    ->label('Miqdor (kg)')
+                TextColumn::make('quantity')
+                    ->label('Miqdor')
+                    ->formatStateUsing(fn (Transaction $record): ?string => $record->quantity !== null ? rtrim(rtrim($record->quantity, '0'), '.').' '.$record->quantity_unit : null)
                     ->placeholder('—')
                     ->sortable(),
                 TextColumn::make('note')

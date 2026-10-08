@@ -90,6 +90,8 @@ class TransactionExportController extends Controller
         }
 
         $header[] = 'quantity_kg';
+        $header[] = 'quantity';
+        $header[] = 'quantity_unit';
 
         return $header;
     }
@@ -120,6 +122,8 @@ class TransactionExportController extends Controller
         }
 
         $row[] = $transaction->quantity_kg ?? '';
+        $row[] = $transaction->quantity ?? $transaction->quantity_kg ?? '';
+        $row[] = $transaction->quantity_unit ?? ($transaction->quantity_kg !== null ? 'kg' : '');
 
         return $row;
     }

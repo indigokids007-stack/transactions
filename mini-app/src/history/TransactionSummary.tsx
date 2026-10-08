@@ -35,10 +35,10 @@ export function TransactionSummary({ transaction, dimensions }: TransactionSumma
         <dt style={labelStyle}>{strings.entry.date}</dt>
         <dd style={valueStyle}>{transaction.occurred_on}</dd>
       </div>
-      {transaction.quantity_kg ? (
+      {(transaction.quantity ?? transaction.quantity_kg) ? (
         <div className="flex items-center justify-between" style={rowStyle}>
           <dt style={labelStyle}>{strings.entry.quantity}</dt>
-          <dd style={valueStyle}>{formatQuantity(transaction.quantity_kg)} kg</dd>
+          <dd style={valueStyle}>{formatQuantity((transaction.quantity ?? transaction.quantity_kg)!)} {transaction.quantity_unit ?? 'kg'}</dd>
         </div>
       ) : null}
       {transaction.note ? (

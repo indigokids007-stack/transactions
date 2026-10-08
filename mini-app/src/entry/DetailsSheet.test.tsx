@@ -10,6 +10,7 @@ function values(overrides: Partial<EntryValues> = {}): EntryValues {
     categoryId: 7,
     dimensionValues: {},
     quantityInput: '',
+    quantityUnit: 'kg',
     amountInput: '',
     note: '',
     occurredOn: '2026-07-31',

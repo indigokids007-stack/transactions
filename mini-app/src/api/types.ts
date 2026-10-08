@@ -39,6 +39,8 @@ export type ApiTransaction = {
   occurred_on: string
   note: string | null
   quantity_kg?: string | null
+  quantity?: string | null
+  quantity_unit?: 'kg' | 'litr' | 'dona' | null
   category: { id: number; name: string }
   user: { id: number; name: string }
   department: { id: number; name: string } | null
@@ -105,6 +107,8 @@ export type TransactionWrite = {
   category_id?: number
   note?: string | null
   quantity_kg?: string | null
+  quantity?: string | null
+  quantity_unit?: 'kg' | 'litr' | 'dona' | null
   dimension_values?: Record<string, number>
 }
 

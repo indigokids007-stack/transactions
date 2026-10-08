@@ -19,7 +19,10 @@ class CreateTransaction
     {
         $amountMinor = $this->convertAmount($input);
 
-        return DB::transaction(function () use ($input, $actor, $amountMinor): Transaction {
+        $quantity = Quantity::normalize($input->quantity ?? $input->quantityKg);
+        $unit = Quantity::unit($quantity, $input->quantityUnit ?? ($input->quantityKg !== null ? 'kg' : null));
+
+        return DB::transaction(function () use ($input, $actor, $amountMinor, $quantity, $unit): Transaction {
             $transaction = Transaction::create([
                 'user_id' => $input->userId,
                 'department_id' => $input->departmentId,
@@ -29,7 +32,9 @@ class CreateTransaction
                 'occurred_on' => $input->occurredOn,
                 'category_id' => $input->categoryId,
                 'note' => $input->note,
-                'quantity_kg' => Quantity::normalize($input->quantityKg),
+                'quantity' => $quantity,
+                'quantity_unit' => $unit,
+                'quantity_kg' => $unit === 'kg' ? $quantity : null,
                 'created_by' => $actor->id,
                 'idempotency_key' => $input->idempotencyKey,
             ]);

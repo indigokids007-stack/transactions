@@ -50,6 +50,8 @@ class StoreTransactionRequest extends FormRequest
             dimensionValues: $this->dimensionValues(),
             idempotencyKey: $this->idempotencyKey(),
             quantityKg: $this->filled('quantity_kg') ? $this->string('quantity_kg')->toString() : null,
+            quantity: $this->filled('quantity') ? $this->string('quantity')->toString() : null,
+            quantityUnit: $this->filled('quantity_unit') ? $this->string('quantity_unit')->toString() : null,
         );
     }
 

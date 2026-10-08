@@ -30,9 +30,10 @@ export const strings = {
     // The entry screen's gradient-header title, above the amount field.
     newEntry: 'Yangi yozuv',
     amount: 'Summa',
-    quantity: 'Miqdor (kg)',
+    quantity: 'Miqdor',
+    quantityUnit: 'Miqdor birligi',
     quantityPlaceholder: 'Masalan: 2,5',
-    invalidQuantity: 'Noldan katta miqdor kiriting. Masalan: 2,5 kg (3 tagacha kasr raqami).',
+    invalidQuantity: 'Noldan katta miqdor kiriting. Masalan: 2,5 (3 tagacha kasr raqami).',
     category: 'Turkum',
     details: 'Batafsil',
     type: 'Turi',

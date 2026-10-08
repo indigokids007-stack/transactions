@@ -9,6 +9,7 @@ export type EntryValues = {
   categoryId: number | null
   dimensionValues: Record<number, number>
   quantityInput: string
+  quantityUnit: 'kg' | 'litr' | 'dona'
   amountInput: string
   note: string
   occurredOn: string
@@ -34,6 +35,7 @@ export function valuesFromDefaults(bootstrap: Bootstrap): EntryValues {
     categoryId: bootstrap.defaults.category_id,
     dimensionValues: { ...bootstrap.defaults.dimension_values },
     quantityInput: '',
+    quantityUnit: 'kg',
     amountInput: '',
     note: '',
     occurredOn: todayIso(),

@@ -125,7 +125,7 @@ export function TransactionList({ items, exponents, hasMore, onLoadMore, onSelec
                       {item.category.name}
                     </span>
                     <span className="mt-1 block" style={{ font: '500 11px/1 "Plus Jakarta Sans"', color: 'var(--muted-2)' }}>
-                      {strings.entry[item.type]} · {item.occurred_on}{item.quantity_kg ? ` · ${formatQuantity(item.quantity_kg)} kg` : ''}
+                      {strings.entry[item.type]} · {item.occurred_on}{(item.quantity ?? item.quantity_kg) ? ` · ${formatQuantity((item.quantity ?? item.quantity_kg)!)} ${item.quantity_unit ?? 'kg'}` : ''}
                     </span>
                   </span>
                   <span
