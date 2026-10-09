@@ -16,7 +16,7 @@ class ReceiptParser
             if ($line === '') {
                 continue;
             }
-            if (preg_match('/(?:jami|итого|итог|total|жами|к оплате|umumiy)\b.*?('.$money.')\s*(?:UZS|сум|so.m)?\s*$/iu', $line, $matches)) {
+            if (preg_match('/(?:jami|итого|итог|total|жами|к оплате|umumiy)(?=\s|[:,=]|$).*?('.$money.')\s*(?:UZS|сум|so.m)?\s*$/iu', $line, $matches)) {
                 $total = $this->amount($matches[1]);
                 $pendingName = '';
 
@@ -38,7 +38,7 @@ class ReceiptParser
             $prefix = trim(substr($line, 0, $amountMatch[0][1]));
             $quantity = null;
             $unit = null;
-            $quantityPattern = '/(?:^|\s)(\d+(?:[.,]\d{1,3})?)\s*(kg|кг\.?|litr|литр\.?|л\.?|dona|дона|шт\.?|pcs)\b/iu';
+            $quantityPattern = '/(?:^|\s)(\d+(?:[.,]\d{1,3})?)\s*(kg|кг\.?|litr|литр\.?|л\.?|dona|дона|шт\.?|pcs)(?=\s|[xх×*=]|$)/iu';
             if (preg_match($quantityPattern, $prefix, $quantityMatch, PREG_OFFSET_CAPTURE)) {
                 $quantity = str_replace(',', '.', $quantityMatch[1][0]);
                 $unit = $this->unit($quantityMatch[2][0]);

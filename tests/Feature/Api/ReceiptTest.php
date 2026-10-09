@@ -1,10 +1,13 @@
 <?php
 
+use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use App\Models\Category;
 use App\Models\Currency;
 use App\Models\Receipt;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Policies\ReceiptPolicy;
 use App\Services\Receipts\ReceiptOcr;
 use App\Services\Receipts\ReceiptParser;
 use Illuminate\Http\UploadedFile;
@@ -91,4 +94,15 @@ it('preserves exact minor units when a receipt amount is near the supported limi
     $receipt = Receipt::create(['user_id' => $user->id, 'image_path' => 'receipts/sample.png', 'image_hash' => str_repeat('c', 64), 'ocr_text' => '', 'draft' => []]);
     $this->postJson("/api/receipts/{$receipt->id}/confirm", ['confirmed' => true, 'occurred_on' => today()->toDateString(), 'currency' => 'USD', 'total' => '9999999999999.99', 'items' => [['name' => 'Tovar', 'category_id' => $category->id, 'quantity' => '1', 'quantity_unit' => 'dona', 'amount' => '9999999999999.99']]])
         ->assertOk()->assertJsonPath('data.0.amount_minor', 999999999999999)->assertJsonPath('data.0.amount', '9999999999999.99');
+});
+
+it('denies private receipt images to inactive web-session users', function () {
+    $user = User::factory()->make(['id' => 1, 'role' => UserRole::Admin, 'status' => UserStatus::Pending]);
+    $receipt = new Receipt(['user_id' => 1, 'image_path' => 'receipts/sample.png']);
+    expect(app(ReceiptPolicy::class)->view($user, $receipt))->toBeFalse();
+});
+
+it('reads Cyrillic item quantities and a Cyrillic receipt total', function () {
+    $parsed = app(ReceiptParser::class)->parse("Гречка 2,5 кг x 20 000 = 50 000,00\nМолоко 3 л x 10 000 = 30 000,00\nХлеб 4 шт. 12 000,00\nИТОГО: 92 000,00");
+    expect($parsed['total'])->toBe('92000')->and(array_column($parsed['items'], 'quantity_unit'))->toBe(['kg', 'litr', 'dona']);
 });
