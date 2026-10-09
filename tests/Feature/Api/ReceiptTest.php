@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Category;
+use App\Models\Currency;
 use App\Models\Receipt;
 use App\Models\Transaction;
 use App\Models\User;
@@ -81,4 +82,13 @@ it('reads a real receipt image with the installed OCR engine', function () {
     $parsed = app(ReceiptParser::class)->parse($text);
     expect($parsed['total'])->toBe('80000')->and(count($parsed['items']))->toBe(2);
     expect(array_column($parsed['items'], 'quantity_unit'))->toBe(['kg', 'litr']);
+});
+
+it('preserves exact minor units when a receipt amount is near the supported limit', function () {
+    Sanctum::actingAs($user = User::factory()->create());
+    Currency::updateOrCreate(['code' => 'USD'], ['name' => 'Dollar', 'exponent' => 2, 'is_active' => true]);
+    $category = Category::factory()->create();
+    $receipt = Receipt::create(['user_id' => $user->id, 'image_path' => 'receipts/sample.png', 'image_hash' => str_repeat('c', 64), 'ocr_text' => '', 'draft' => []]);
+    $this->postJson("/api/receipts/{$receipt->id}/confirm", ['confirmed' => true, 'occurred_on' => today()->toDateString(), 'currency' => 'USD', 'total' => '9999999999999.99', 'items' => [['name' => 'Tovar', 'category_id' => $category->id, 'quantity' => '1', 'quantity_unit' => 'dona', 'amount' => '9999999999999.99']]])
+        ->assertOk()->assertJsonPath('data.0.amount_minor', 999999999999999)->assertJsonPath('data.0.amount', '9999999999999.99');
 });

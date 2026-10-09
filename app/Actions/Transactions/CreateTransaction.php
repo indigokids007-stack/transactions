@@ -9,6 +9,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Support\Money;
 use App\Support\Quantity;
+use App\Support\ReceiptMoney;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -67,7 +68,9 @@ class CreateTransaction
             );
         }
 
-        $amountMinor = Money::toMinor($input->amount, $input->currency);
+        $amountMinor = $input->receiptId !== null
+            ? ReceiptMoney::minor($input->amount, $input->currency)
+            : Money::toMinor($input->amount, $input->currency);
 
         if ($amountMinor <= 0) {
             throw new InvalidArgumentException(
