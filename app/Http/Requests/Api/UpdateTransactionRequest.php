@@ -91,6 +91,10 @@ class UpdateTransactionRequest extends FormRequest
             }
         }
 
+        if ($this->has('is_market_purchase')) {
+            $changes['is_market_purchase'] = $this->boolean('is_market_purchase');
+        }
+
         return $changes;
     }
 

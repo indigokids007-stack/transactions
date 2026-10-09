@@ -38,6 +38,8 @@ export type ApiTransaction = {
   currency: string
   occurred_on: string
   note: string | null
+  is_market_purchase?: boolean
+  receipt_id?: number | null
   quantity_kg?: string | null
   quantity?: string | null
   quantity_unit?: 'kg' | 'litr' | 'dona' | null
@@ -106,6 +108,8 @@ export type TransactionWrite = {
   occurred_on?: string
   category_id?: number
   note?: string | null
+  is_market_purchase?: boolean
+  receipt_id?: number | null
   quantity_kg?: string | null
   quantity?: string | null
   quantity_unit?: 'kg' | 'litr' | 'dona' | null
@@ -150,3 +154,7 @@ export type ApiTransactionRevision = {
   snapshot: Record<string, unknown>
   created_at: string
 }
+
+export type ReceiptItem = { name: string; quantity: string | null; quantity_unit: 'kg' | 'litr' | 'dona' | null; amount: string; category_id: number | null }
+export type ReceiptDraft = { id: number; text: string; items: ReceiptItem[]; total: string | null; currency: string; confirmed: boolean }
+export type ReceiptConfirmation = { confirmed: true; currency: string; occurred_on: string; total: string; dimension_values: Record<number, number>; items: ReceiptItem[] }

@@ -9,6 +9,7 @@ function values(overrides: Partial<EntryValues> = {}): EntryValues {
     currency: 'UZS',
     categoryId: 7,
     dimensionValues: {},
+    isMarketPurchase: false,
     quantityInput: '',
     quantityUnit: 'kg',
     amountInput: '',

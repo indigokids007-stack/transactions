@@ -30,6 +30,7 @@ export type TransactionEditValues = {
   dimensionValues: Record<number, number>
   currency: string
   /** Raw `parseAmount` input. Empty string is the sentinel for "not touched". */
+  isMarketPurchase: boolean
   quantityInput: string
   quantityUnit: 'kg' | 'litr' | 'dona'
   amountInput: string
@@ -45,6 +46,7 @@ export function valuesFromTransaction(transaction: ApiTransaction): TransactionE
       transaction.dimension_values.map((value) => [value.dimension_id, value.value_id]),
     ),
     currency: transaction.currency,
+    isMarketPurchase: transaction.is_market_purchase ?? false,
     quantityInput: (transaction.quantity ?? transaction.quantity_kg) ? formatQuantity((transaction.quantity ?? transaction.quantity_kg)!) : '',
     quantityUnit: transaction.quantity_unit ?? 'kg',
     amountInput: '',
@@ -78,6 +80,7 @@ export function diffValues(
     changes.quantity = parseQuantity(current.quantityInput)
     changes.quantity_unit = changes.quantity === null ? null : current.quantityUnit
   }
+  if (current.isMarketPurchase !== original.isMarketPurchase) changes.is_market_purchase = current.isMarketPurchase
   if (current.type !== original.type) changes.type = current.type
   if (current.categoryId !== original.categoryId) changes.category_id = current.categoryId
   if (current.note !== original.note) changes.note = current.note === '' ? null : current.note

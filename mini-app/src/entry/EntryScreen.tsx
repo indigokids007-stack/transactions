@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ReceiptImport } from '../receipts/ReceiptImport'
 import { Menu } from 'lucide-react'
 import type { ApiClient } from '../api/client'
 import type { Bootstrap } from '../api/types'
@@ -169,6 +170,8 @@ export function EntryScreen({ bootstrap, client, onSaveStateChange }: EntryScree
         </div>
       </div>
 
+      {form.values.type === 'expense' ? <div style={{ padding: '14px 22px 0' }}><label className="flex items-center gap-2"><input type="checkbox" checked={form.values.isMarketPurchase} onChange={(event) => form.setMarketPurchase(event.target.checked)} />{strings.entry.marketPurchase}</label></div> : null}
+      {form.values.type === 'expense' ? <ReceiptImport client={client} bootstrap={bootstrap} occurredOn={form.values.occurredOn} dimensionValues={form.values.dimensionValues} /> : null}
       <CategoryChips
         categories={form.categories}
         type={form.values.type}

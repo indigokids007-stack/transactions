@@ -51,6 +51,7 @@ class StoreTransactionRequest extends FormRequest
             idempotencyKey: $this->idempotencyKey(),
             quantityKg: $this->filled('quantity_kg') ? $this->string('quantity_kg')->toString() : null,
             quantity: $this->filled('quantity') ? $this->string('quantity')->toString() : null,
+            isMarketPurchase: $this->boolean('is_market_purchase'),
             quantityUnit: $this->filled('quantity_unit') ? $this->string('quantity_unit')->toString() : null,
         );
     }

@@ -4,6 +4,7 @@ namespace App\Actions\Transactions;
 
 use App\DataObjects\TransactionInput;
 use App\Enums\RevisionAction;
+use App\Enums\TransactionType;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Support\Money;
@@ -32,6 +33,8 @@ class CreateTransaction
                 'occurred_on' => $input->occurredOn,
                 'category_id' => $input->categoryId,
                 'note' => $input->note,
+                'is_market_purchase' => $input->type === TransactionType::Expense && $input->isMarketPurchase,
+                'receipt_id' => $input->receiptId,
                 'quantity' => $quantity,
                 'quantity_unit' => $unit,
                 'quantity_kg' => $unit === 'kg' ? $quantity : null,

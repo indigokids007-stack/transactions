@@ -28,6 +28,8 @@ class Transaction extends Model
         'quantity_kg',
         'quantity',
         'quantity_unit',
+        'is_market_purchase',
+        'receipt_id',
         'created_by',
         'idempotency_key',
     ];
@@ -40,6 +42,7 @@ class Transaction extends Model
             'amount_minor' => 'integer',
             'quantity_kg' => 'decimal:3',
             'quantity' => 'decimal:3',
+            'is_market_purchase' => 'boolean',
         ];
     }
 

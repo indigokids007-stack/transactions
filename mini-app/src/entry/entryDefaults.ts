@@ -8,6 +8,7 @@ export type EntryValues = {
   currency: string
   categoryId: number | null
   dimensionValues: Record<number, number>
+  isMarketPurchase: boolean
   quantityInput: string
   quantityUnit: 'kg' | 'litr' | 'dona'
   amountInput: string
@@ -34,6 +35,7 @@ export function valuesFromDefaults(bootstrap: Bootstrap): EntryValues {
     currency: bootstrap.defaults.currency,
     categoryId: bootstrap.defaults.category_id,
     dimensionValues: { ...bootstrap.defaults.dimension_values },
+    isMarketPurchase: false,
     quantityInput: '',
     quantityUnit: 'kg',
     amountInput: '',

@@ -28,5 +28,7 @@ readonly class TransactionInput
         public ?string $quantityKg = null,
         public ?string $quantity = null,
         public ?string $quantityUnit = null,
+        public bool $isMarketPurchase = false,
+        public ?int $receiptId = null,
     ) {}
 }

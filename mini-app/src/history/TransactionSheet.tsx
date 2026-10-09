@@ -1,3 +1,4 @@
+import { ReceiptViewer } from '../receipts/ReceiptViewer'
 import { useState } from 'react'
 import type { ApiClient } from '../api/client'
 import type { ApiTransaction, ApiUser, Bootstrap } from '../api/types'
@@ -15,7 +16,7 @@ export type TransactionSheetProps = {
   transaction: ApiTransaction
   bootstrap: Bootstrap
   user: ApiUser
-  client: Pick<ApiClient, 'updateTransaction' | 'deleteTransaction' | 'revisions'>
+  client: Pick<ApiClient, 'updateTransaction' | 'deleteTransaction' | 'revisions'> & Partial<Pick<ApiClient, 'receiptImage'>>
   onClose: () => void
   onSaved: (updated: ApiTransaction) => void
   onDeleted: (id: number) => void
@@ -121,6 +122,8 @@ export function TransactionSheet({
         />
 
         <TransactionHeader transaction={transaction} exponents={bootstrap.currencies} revisionState={revisionState} />
+
+        {transaction.receipt_id && client.receiptImage ? <ReceiptViewer id={transaction.receipt_id} load={client.receiptImage} /> : null}
 
         {canManage ? (
           <TransactionFields values={values} bootstrap={bootstrap} onChange={patch} amountInvalid={amountInvalid} />

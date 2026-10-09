@@ -35,6 +35,7 @@ export function TransactionSummary({ transaction, dimensions }: TransactionSumma
         <dt style={labelStyle}>{strings.entry.date}</dt>
         <dd style={valueStyle}>{transaction.occurred_on}</dd>
       </div>
+      {transaction.is_market_purchase ? <div className="flex items-center justify-between" style={rowStyle}><dt style={labelStyle}>{strings.entry.marketPurchase}</dt><dd style={valueStyle}>✓</dd></div> : null}
       {(transaction.quantity ?? transaction.quantity_kg) ? (
         <div className="flex items-center justify-between" style={rowStyle}>
           <dt style={labelStyle}>{strings.entry.quantity}</dt>

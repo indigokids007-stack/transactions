@@ -18,7 +18,7 @@ class UpdateTransaction
      * absent: who a transaction belongs to, and the department snapshot taken from
      * them, are settled at creation and never re-decided by an editor.
      */
-    private const UPDATABLE = ['type', 'amount_minor', 'currency', 'occurred_on', 'category_id', 'note', 'quantity_kg', 'quantity', 'quantity_unit'];
+    private const UPDATABLE = ['type', 'amount_minor', 'currency', 'occurred_on', 'category_id', 'note', 'quantity_kg', 'quantity', 'quantity_unit', 'is_market_purchase'];
 
     public function __construct(private readonly RecordRevision $recordRevision) {}
 
